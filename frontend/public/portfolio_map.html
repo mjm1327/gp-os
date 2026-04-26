@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GP OS | Geographic Portfolio View</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/topojson@3/dist/topojson.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --ocean: #b8d4e8; --land: #8fbc8b; --land-h: #70a870;
+            --bubble: #f59e0b; --bubble-h: #fbbf24; --bubble-b: #d97706;
+            --navy: #0f172a; --blue: #1e40af; --accent: #3b82f6;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+               background: var(--ocean); color: #1f2937; height: 100vh;
+               overflow: hidden; display: flex; flex-direction: column; }
+
+        /* TOP BAR */
+        .top-bar { background: linear-gradient(135deg,var(--navy),#1e3a8a); color:#fff;
+                   padding:10px 20px; display:flex; align-items:center;
+                   justify-content:space-between; flex-shrink:0; }
+        .tb-left { display:flex; align-items:center; gap:10px; }
+        .tb-left h1 { font-size:17px; font-weight:700; }
+        .tb-left .sub { font-size:11px; opacity:.65; }
+        .gs-bar { display:flex; gap:20px; }
+        .gs { text-align:right; }
+        .gs .v { font-size:16px; font-weight:700; }
+        .gs .l { font-size:9px; opacity:.6; text-transform:uppercase; letter-spacing:.5px; }
+
+        /* FILTER BAR */
+        .filter-bar { background:#fff; border-bottom:1px solid #e5e7eb; padding:7px 20px;
+                      display:flex; align-items:center; gap:6px; flex-wrap:wrap; flex-shrink:0; }
+        .fl { font-size:11px; color:#9ca3af; font-weight:600; letter-spacing:.4px; flex-shrink:0; }
+        .fp { padding:4px 11px; border-radius:20px; font-size:11px; font-weight:500;
+              cursor:pointer; border:1.5px solid #e5e7eb; background:#fff; color:#4b5563;
+              transition:all .2s; white-space:nowrap; }
+        .fp:hover { border-color:var(--accent); color:var(--blue); }
+        .fp.on { background:var(--blue); color:#fff; border-color:var(--blue); }
+
+        /* MAP */
+        .map-wrap { flex:1; position:relative; overflow:hidden; }
+        #world-map { width:100%; height:100%; display:block; }
+        .country { fill:var(--land); stroke:#6a9a67; stroke-width:.4; }
+        .country.hp { fill:var(--land-h); }
+        .graticule { fill:none; stroke:rgba(255,255,255,.15); stroke-width:.4; }
+        .sphere { fill:var(--ocean); }
+        .bubble { fill:var(--bubble); fill-opacity:.88; stroke:var(--bubble-b); stroke-width:1.5;
+                  cursor:pointer; transition:fill .18s,fill-opacity .3s; }
+        .bubble:hover { fill:var(--bubble-h); fill-opacity:1; }
+        .bubble.sel { stroke:#fff; stroke-width:2.5; fill:var(--bubble-h); }
+        .clabel { font-size:10px; font-weight:600; fill:#374151; text-anchor:middle;
+                  pointer-events:none; paint-order:stroke; stroke:rgba(255,255,255,.7); stroke-width:3px; }
+
+        /* TOOLTIP */
+        #tip { position:absolute; background:#fff; border-radius:10px; padding:13px 16px;
+               box-shadow:0 6px 24px rgba(0,0,0,.15); pointer-events:none; z-index:50;
+               width:235px; display:none; }
+        #tip.show { display:block; }
+        .tt-name { font-size:15px; font-weight:700; color:#111827; margin-bottom:8px; }
+        .tt-row { display:flex; justify-content:space-between; font-size:12px; margin-bottom:3px; }
+        .tt-lbl { color:#6b7280; } .tt-val { font-weight:600; color:#111827; }
+        .tt-hr { border:none; border-top:1px solid #f3f4f6; margin:8px 0 7px; }
+        .tt-secs { font-size:11px; line-height:1.8; }
+        .tt-dot { display:inline-block; width:7px; height:7px; border-radius:50%;
+                  margin-right:3px; vertical-align:middle; }
+        .tt-hint { font-size:10px; color:var(--accent); text-align:center;
+                   margin-top:7px; font-weight:500; }
+
+        /* OVERLAY */
+        #overlay { position:fixed; inset:0; background:rgba(0,0,0,.28); z-index:100; display:none; }
+        #overlay.show { display:block; }
+
+        /* DRAWER */
+        #drawer { position:fixed; top:0; right:-520px; width:520px; height:100vh;
+                  background:#fff; box-shadow:-4px 0 28px rgba(0,0,0,.18);
+                  z-index:200; transition:right .32s cubic-bezier(.4,0,.2,1);
+                  display:flex; flex-direction:column; }
+        #drawer.open { right:0; }
+        .dh { background:linear-gradient(135deg,var(--navy),#1e3a8a); color:#fff;
+              padding:18px 20px 16px; flex-shrink:0; position:relative; }
+        .dh-c { font-size:21px; font-weight:700; margin-bottom:2px; }
+        .dh-s { font-size:12px; opacity:.65; }
+        .dh-x { position:absolute; top:14px; right:14px; background:rgba(255,255,255,.15);
+                border:none; color:#fff; width:28px; height:28px; border-radius:50%;
+                font-size:14px; cursor:pointer; display:flex; align-items:center;
+                justify-content:center; transition:background .15s; }
+        .dh-x:hover { background:rgba(255,255,255,.3); }
+        .d-stats { display:flex; border-bottom:1px solid #e5e7eb; flex-shrink:0; background:#f9fafb; }
+        .d-stat { flex:1; padding:12px 8px; text-align:center; border-right:1px solid #e5e7eb; }
+        .d-stat:last-child { border-right:none; }
+        .d-stat .v { font-size:15px; font-weight:700; color:var(--blue); }
+        .d-stat .l { font-size:9px; color:#9ca3af; text-transform:uppercase; letter-spacing:.5px; margin-top:2px; }
+        .d-body { flex:1; overflow-y:auto; padding:18px 20px; }
+        .stitle { font-size:10px; font-weight:700; color:#9ca3af; text-transform:uppercase;
+                  letter-spacing:.8px; margin-bottom:10px; }
+
+        /* Sector bars */
+        .sec-row { display:flex; align-items:center; margin-bottom:9px; cursor:pointer;
+                   border-radius:5px; padding:3px 4px; transition:background .15s; }
+        .sec-row:hover { background:#f9fafb; }
+        .sec-row.dim { opacity:.3; }
+        .sec-name { width:128px; font-size:12px; color:#374151; flex-shrink:0;
+                    display:flex; align-items:center; gap:5px; }
+        .sec-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+        .sec-bg { flex:1; height:18px; background:#f3f4f6; border-radius:4px;
+                  overflow:hidden; margin:0 8px; position:relative; }
+        .sec-bar { height:100%; border-radius:4px; transition:width .35s ease; opacity:.75; }
+        .sec-pct { font-size:11px; color:#6b7280; width:36px; text-align:right; flex-shrink:0; }
+        .sec-amt { font-size:11px; color:#374151; font-weight:600; width:60px; text-align:right; flex-shrink:0; }
+
+        /* Deals */
+        .d-pills { display:flex; gap:5px; flex-wrap:wrap; margin-bottom:10px; }
+        .dp { padding:3px 9px; border-radius:12px; font-size:10px; font-weight:500;
+              cursor:pointer; border:1px solid #e5e7eb; background:#fff; color:#4b5563;
+              transition:all .15s; }
+        .dp.on { background:var(--blue); color:#fff; border-color:var(--blue); }
+        .dtbl { width:100%; border-collapse:collapse; font-size:12px; }
+        .dtbl thead th { padding:7px 8px; text-align:left; background:#f9fafb;
+                         border-bottom:2px solid #e5e7eb; font-size:10px; font-weight:700;
+                         color:#9ca3af; text-transform:uppercase; letter-spacing:.4px;
+                         position:sticky; top:0; }
+        .dtbl tbody td { padding:8px 8px; border-bottom:1px solid #f3f4f6; vertical-align:middle; }
+        .dtbl tbody tr:hover td { background:#f9fafb; }
+        .dtbl tbody tr:last-child td { border-bottom:none; }
+        .badge { display:inline-block; padding:2px 7px; border-radius:10px; font-size:10px; font-weight:600; }
+        .b-fl{background:#dbeafe;color:#1e40af} .b-sl{background:#fce7f3;color:#be185d}
+        .b-mz{background:#fef3c7;color:#92400e} .b-eq{background:#d1fae5;color:#065f46}
+        .b-ut{background:#ede9fe;color:#5b21b6}
+        .empty { color:#9ca3af; text-align:center; padding:24px 0; font-size:13px; }
+
+        /* Loading */
+        #loading { position:absolute; inset:0; display:flex; flex-direction:column;
+                   align-items:center; justify-content:center; background:var(--ocean); z-index:10; }
+        .spin { width:40px; height:40px; border:4px solid rgba(255,255,255,.3);
+                border-top-color:#fff; border-radius:50%; animation:sp .8s linear infinite; margin-bottom:12px; }
+        @keyframes sp { to { transform:rotate(360deg); } }
+        #loading p { color:#fff; font-size:13px; opacity:.8; }
+    </style>
+</head>
+<body>
+
+<div class="top-bar">
+    <div class="tb-left">
+        <span style="font-size:22px">🌍</span>
+        <div><h1>Geographic Portfolio View</h1>
+             <div class="sub">Hover to preview · Click bubble to explore deals &amp; sector allocation</div></div>
+    </div>
+    <div class="gs-bar" id="gStats"></div>
+</div>
+
+<div class="filter-bar" id="fBar"><span class="fl">SECTOR:</span></div>
+
+<div class="map-wrap">
+    <div id="loading"><div class="spin"></div><p>Loading world map…</p></div>
+    <svg id="world-map"></svg>
+    <div id="tip"></div>
+</div>
+
+<div id="overlay" onclick="closeDrawer()"></div>
+
+<div id="drawer">
+    <div class="dh">
+        <button class="dh-x" onclick="closeDrawer()">✕</button>
+        <div class="dh-c" id="dCountry"></div>
+        <div class="dh-s" id="dSub"></div>
+    </div>
+    <div class="d-stats" id="dStats"></div>
+    <div class="d-body" id="dBody"></div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  SEEDED RNG — Mulberry32, always produces identical sequence
+// ═══════════════════════════════════════════════════════════════
+function mkRNG(seed) {
+    let s = seed >>> 0;
+    return function() {
+        s += 0x6D2B79F5;
+        let t = Math.imul(s ^ (s >>> 15), s | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+}
+const RNG = mkRNG(20240101); // fixed seed → same 500 deals every load
+
+function pickW(rng, items, weights) {
+    const total = weights.reduce((a,b)=>a+b,0);
+    let r = rng() * total;
+    for (let i = 0; i < items.length; i++) { r -= weights[i]; if (r <= 0) return items[i]; }
+    return items[items.length-1];
+}
+function rRange(rng,mn,mx){ return mn + rng()*(mx-mn); }
+function rInt(rng,mn,mx){ return Math.floor(rRange(rng,mn,mx+1)); }
+function pick(rng,arr){ return arr[Math.floor(rng()*arr.length)]; }
+
+// ═══════════════════════════════════════════════════════════════
+//  NAME GENERATION
+// ═══════════════════════════════════════════════════════════════
+const GEN_PFXS = ["Apex","Summit","Core","Nova","Peak","Ridge","Crown","Sterling","Meridian",
+    "Harbor","Beacon","Crest","Pinnacle","Atlas","Titan","Iron","Bridge","Horizon",
+    "Vanguard","Frontier","Alliance","Catalyst","Keystone","Nexus","Quantum","Vertex","Zenith",
+    "Granite","Eagle","Falcon","Velocity","Momentum","Forge","Pillar","Soar","Terra","Unity",
+    "Cobalt","Ember","Fable","Globe","Haven","Indigo","Jade","Kestrel","Lumen","Marble",
+    "Onyx","Prism","Quartz","Raven","Slate","Tundra","Uluru","Verdant","Willow","Xanadu"];
+
+const CO_PFXS = {
+    US:["American","National","Pacific","Atlantic","Continental","Federal","Liberty","Pioneer","Heritage","Patriot"],
+    GB:["British","Royal","Thames","Anglo","Britannia","Albion","Churchill","Oxford","Windsor","Tudor"],
+    DE:["Deutsche","Rhein","Bayern","Europa","Bundes","Mittel","Nord","Ost","West","Alpen"],
+    FR:["Paris","Lyon","Bordeaux","Provence","Alsace","Normandie","Bretagne","Loire","Rhône","Île-de"],
+    JP:["Tokyo","Osaka","Nippon","Kyoto","Sapporo","Yokohama","Nagoya","Fukuoka","Kobe","Sendai"],
+    AU:["Sydney","Melbourne","Brisbane","Perth","Canberra","Adelaide","Darwin","Gold Coast","Hunter","Coral"],
+    CA:["Canadian","Toronto","Vancouver","Calgary","Ottawa","Montreal","Winnipeg","Halifax","Victoria","Alberta"],
+    KR:["Seoul","Busan","Incheon","Daegu","Korean","Hanguk","Joseon","Han","Ulsan","Jeju"],
+    NL:["Dutch","Amsterdam","Rotterdam","Utrecht","Eindhoven","Benelux","Holland","Polder","Tulip","Delta"],
+    SE:["Swedish","Stockholm","Gothenburg","Malmö","Nordic","Uppsala","Örebro","Linköping","Scandia","Norden"],
+    IT:["Italian","Milan","Rome","Florence","Venice","Turin","Naples","Bologna","Genova","Palermo"],
+    ES:["Spanish","Madrid","Barcelona","Valencia","Sevilla","Bilbao","Iberian","Catalonia","Andaluz","Castilla"],
+    SG:["Singapore","Straits","Lion City","Marina","Sentosa","Raffles","Orchard","APAC","Merlion","Temasek"],
+    CH:["Swiss","Zurich","Geneva","Basel","Bern","Lausanne","Alpine","Helvetia","Lucerne","Interlaken"],
+    IN:["Indian","Mumbai","Delhi","Bangalore","Hyderabad","Chennai","Kolkata","Pune","Ahmedabad","Jaipur"],
+    NO:["Norwegian","Oslo","Bergen","Trondheim","Stavanger","Nordic","Fjord","Norseman","Kristiansand","Tromsø"],
+    IE:["Irish","Dublin","Cork","Galway","Limerick","Celtic","Emerald","Shannon","Liffey","Connacht"],
+    DK:["Danish","Copenhagen","Aarhus","Odense","Aalborg","Nordic","Viking","Jutland","Funen","Zealand"]
+};
+
+const SEC_WORDS = {
+    "Technology":         ["Digital","Tech","Data","Cloud","Cyber","Software","AI","Systems","Platform","Networks","Code","Logic","Byte","Compute","Stream"],
+    "Healthcare":         ["Health","Medical","Pharma","Bio","Life Sciences","Clinical","Wellness","Care","Medic","Therapeutics","Diagnostics","Surgical","Rx","Gene","Vital"],
+    "Business Services":  ["Business","Services","Operations","Consulting","Solutions","Advisory","Process","Outsource","Management","Workflow","Commerce","Corp","Business Process","Enterprise","Office"],
+    "Financial Services": ["Financial","Capital","Asset","Credit","Investment","Wealth","Finance","Fund","Bank","Lending","Equity","Debt","Treasury","Markets","Trust"],
+    "Consumer":           ["Consumer","Brands","Retail","Lifestyle","Products","Goods","Style","Home","Living","Market","Shop","Fashion","Food","Beverage","Commerce"],
+    "Industrial":         ["Industrial","Manufacturing","Engineering","Supply","Production","Factory","Machinery","Components","Fabrication","Process","Materials","Precision","Structural","Tools","Plant"],
+    "Energy":             ["Energy","Power","Renewable","Clean","Grid","Solar","Wind","Gas","Oil","Hydro","Nuclear","Fuel","Electric","Generation","Transition"],
+    "Real Estate":        ["Property","Real Estate","Realty","Estate","REIT","Realty","Land","Asset","Urban","Commercial","Residential","Development","Infrastructure","Build","Space"],
+    "Automotive":         ["Auto","Vehicle","Mobility","Transport","Motor","Drive","Fleet","Parts","EV","Wheels","Ride","Automotive","Logistics","Supply","Assembly"],
+    "Media & Comms":      ["Media","Communications","Broadcasting","Content","Digital Media","Network","Platform","Streaming","Publishing","Press","Signal","Broadcast","Studio","News","Entertainment"]
+};
+
+const SFXS = ["Group","Holdings","Corp","Partners","Solutions","Systems","Ltd","Capital",
+    "Ventures","Industries","Enterprises","Associates","Co","Advisors","Collective",
+    "Alliance","Network","Trust","Fund","Global"];
+
+function genName(rng, country, sector) {
+    const useCo = rng() < 0.55;
+    const pfx = useCo ? pick(rng, CO_PFXS[country]) : pick(rng, GEN_PFXS);
+    const mid = pick(rng, SEC_WORDS[sector]);
+    const sfx = pick(rng, SFXS);
+    return `${pfx} ${mid} ${sfx}`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  DEAL GENERATION — 500 positions, always identical
+// ═══════════════════════════════════════════════════════════════
+const SECTORS     = Object.keys(SEC_WORDS);
+const SEC_W       = [25,20,14,10,9,7,5,4,3,3];
+const ACS         = ["First Lien","Unitranche","Second Lien","Mezz","Equity Co-Inv"];
+const AC_W        = [52,20,14,8,6];
+const BADGE       = {"First Lien":"b-fl","Unitranche":"b-ut","Second Lien":"b-sl","Mezz":"b-mz","Equity Co-Inv":"b-eq"};
+
+// Country distribution → sums to exactly 500
+const C_DIST = [
+    {co:"US",n:190},{co:"GB",n:47},{co:"CA",n:30},{co:"DE",n:27},{co:"AU",n:27},
+    {co:"FR",n:21},{co:"JP",n:20},{co:"KR",n:15},{co:"NL",n:15},{co:"SE",n:15},
+    {co:"IT",n:15},{co:"ES",n:15},{co:"SG",n:15},{co:"CH",n:11},{co:"IN",n:10},
+    {co:"NO",n:9}, {co:"IE",n:9}, {co:"DK",n:9}
+];
+
+// Base drawn ranges by asset class (in $M) — will be scaled per country
+const DRN_RANGE = {
+    "First Lien":    [60,350], "Unitranche":[80,400],
+    "Second Lien":   [30,200], "Mezz":[20,150], "Equity Co-Inv":[15,100]
+};
+// Country size scale (US=1.0 is largest deals)
+const CO_SCALE = {US:1.0,GB:0.85,CA:0.85,DE:0.78,AU:0.75,FR:0.75,
+                  JP:0.35,KR:0.55,NL:0.65,SE:0.65,IT:0.6,ES:0.6,
+                  SG:0.6,CH:0.7,IN:0.45,NO:0.6,IE:0.55,DK:0.55};
+// Yield ranges by asset class
+const YLD_RANGE = {
+    "First Lien":[8.0,10.0],"Unitranche":[8.5,11.0],
+    "Second Lien":[10.0,13.0],"Mezz":[11.0,14.5],"Equity Co-Inv":[10.0,16.0]
+};
+
+const DEALS = [];
+let _id = 1;
+C_DIST.forEach(({co,n}) => {
+    for (let i = 0; i < n; i++) {
+        const sec = pickW(RNG, SECTORS, SEC_W);
+        const ac  = pickW(RNG, ACS, AC_W);
+        const [dmn,dmx] = DRN_RANGE[ac];
+        const sc  = CO_SCALE[co];
+        const drn = Math.round(rRange(RNG, dmn*sc, dmx*sc) / 5) * 5; // round to $5M
+        const [ymn,ymx] = YLD_RANGE[ac];
+        const cy  = +rRange(RNG, ymn, ymx).toFixed(1);
+        const obl = genName(RNG, co, sec);
+        DEALS.push({id:_id++, obl, co, sec, ac, drn, cy});
+    }
+});
+
+// Verify
+console.log(`Generated ${DEALS.length} deals, total $${(DEALS.reduce((s,d)=>s+d.drn,0)/1000).toFixed(1)}B`);
+
+// ═══════════════════════════════════════════════════════════════
+//  REFERENCE — countries, sectors, colors
+// ═══════════════════════════════════════════════════════════════
+const SEC_CLR = {
+    "Technology":"#3b82f6","Healthcare":"#10b981","Business Services":"#8b5cf6",
+    "Financial Services":"#f59e0b","Consumer":"#ef4444","Industrial":"#6b7280",
+    "Energy":"#f97316","Real Estate":"#14b8a6","Automotive":"#ec4899","Media & Comms":"#0ea5e9"
+};
+
+const CTRY = {
+    US:{name:"United States",    c:[-98,  38.5],iso:840},
+    GB:{name:"United Kingdom",   c:[-2.5, 54.0],iso:826},
+    DE:{name:"Germany",          c:[10.5, 51.2],iso:276},
+    FR:{name:"France",           c:[ 2.2, 46.2],iso:250},
+    JP:{name:"Japan",            c:[138,  36.5],iso:392},
+    AU:{name:"Australia",        c:[134, -25.0],iso: 36},
+    CA:{name:"Canada",           c:[-96,  60.0],iso:124},
+    KR:{name:"South Korea",      c:[128,  36.5],iso:410},
+    NL:{name:"Netherlands",      c:[  5.3,52.1],iso:528},
+    SE:{name:"Sweden",           c:[ 18,  63.0],iso:752},
+    IT:{name:"Italy",            c:[ 12.6,42.8],iso:380},
+    ES:{name:"Spain",            c:[ -3.7,40.4],iso:724},
+    SG:{name:"Singapore",        c:[104,   1.3],iso:702},
+    CH:{name:"Switzerland",      c:[  8.2,46.8],iso:756},
+    IN:{name:"India",            c:[ 78.9,20.5],iso:356},
+    NO:{name:"Norway",           c:[ 10,  65.0],iso:578},
+    IE:{name:"Ireland",          c:[ -8,  53.0],iso:372},
+    DK:{name:"Denmark",          c:[ 10,  56.0],iso:208}
+};
+
+// ═══════════════════════════════════════════════════════════════
+//  DERIVED STATE
+// ═══════════════════════════════════════════════════════════════
+const TOTAL = DEALS.reduce((s,d)=>s+d.drn,0);
+
+const BY_CO = {};
+DEALS.forEach(d=>{
+    if(!BY_CO[d.co]) BY_CO[d.co]={deals:[],total:0};
+    BY_CO[d.co].deals.push(d);
+    BY_CO[d.co].total+=d.drn;
+});
+
+const CO_DATA = Object.entries(BY_CO).map(([code,{deals,total}])=>({
+    code, deals, total,
+    name: CTRY[code]?.name ?? code,
+    pct:  total/TOTAL*100,
+    c:    CTRY[code]?.c
+})).filter(x=>x.c);
+
+const ALL_SECS = [...new Set(DEALS.map(d=>d.sec))].sort();
+
+let gSec   = null; // global sector filter
+let dCo    = null; // open drawer country
+let dSec   = null; // drawer sector drill
+
+// ═══════════════════════════════════════════════════════════════
+//  UTILS
+// ═══════════════════════════════════════════════════════════════
+function fmt(n){ return n>=1000 ? '$'+(n/1000).toFixed(1)+'B' : '$'+Math.round(n)+'M'; }
+
+// ═══════════════════════════════════════════════════════════════
+//  GLOBAL STATS
+// ═══════════════════════════════════════════════════════════════
+const avgY = (DEALS.reduce((s,d)=>s+d.cy,0)/DEALS.length).toFixed(1);
+document.getElementById('gStats').innerHTML = `
+    <div class="gs"><div class="v">${fmt(TOTAL)}</div><div class="l">Deployed</div></div>
+    <div class="gs"><div class="v">${DEALS.length}</div><div class="l">Positions</div></div>
+    <div class="gs"><div class="v">${CO_DATA.length}</div><div class="l">Countries</div></div>
+    <div class="gs"><div class="v">${avgY}%</div><div class="l">Avg Yield</div></div>`;
+
+// ═══════════════════════════════════════════════════════════════
+//  FILTER BAR
+// ═══════════════════════════════════════════════════════════════
+const fBar = document.getElementById('fBar');
+function mkPill(label, isAll){
+    const p=document.createElement('span');
+    p.className='fp'+(isAll?' on':'');
+    p.textContent=label;
+    p.addEventListener('click',()=>setGSec(isAll?null:label));
+    fBar.appendChild(p); return p;
+}
+mkPill('All',true);
+ALL_SECS.forEach(s=>mkPill(s,false));
+
+function setGSec(sec){
+    gSec=sec;
+    fBar.querySelectorAll('.fp').forEach(p=>{
+        const on=sec===null?p.textContent==='All':p.textContent===sec;
+        p.classList.toggle('on',on);
+        p.style.background = on&&sec ? SEC_CLR[sec]:'';
+        p.style.color      = on&&sec ? '#fff':'';
+        p.style.borderColor= on&&sec ? SEC_CLR[sec]:'';
+    });
+    updBubbles();
+    if(dCo) renderDrawer(dCo);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  D3 MAP
+// ═══════════════════════════════════════════════════════════════
+const mapEl=document.getElementById('world-map');
+const svg=d3.select('#world-map');
+let proj, pathG, rSc, bubG;
+
+function initMap(W,H){
+    svg.attr('viewBox',`0 0 ${W} ${H}`).attr('width',W).attr('height',H);
+    proj=d3.geoNaturalEarth1().scale(W/6.3).translate([W/2,H/2]);
+    pathG=d3.geoPath().projection(proj);
+    const mx=d3.max(CO_DATA,d=>d.total);
+    rSc=d3.scaleSqrt().domain([0,mx]).range([0,Math.min(W,H)*0.072]);
+}
+
+const ISO_SET=new Set(Object.values(CTRY).map(v=>v.iso));
+
+d3.json('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json')
+  .then(world=>{
+    const W=mapEl.clientWidth||window.innerWidth;
+    const H=mapEl.clientHeight||(window.innerHeight-120);
+    initMap(W,H);
+    document.getElementById('loading').style.display='none';
+
+    const countries=topojson.feature(world,world.objects.countries);
+
+    svg.append('path').datum({type:'Sphere'}).attr('class','sphere').attr('d',pathG);
+    svg.append('path').datum(d3.geoGraticule()()).attr('class','graticule').attr('d',pathG);
+    svg.append('g').selectAll('path').data(countries.features).join('path')
+       .attr('class',d=>'country'+(ISO_SET.has(+d.id)?' hp':''))
+       .attr('d',pathG);
+
+    bubG=svg.append('g');
+    CO_DATA.forEach(cd=>{
+        const [cx,cy]=proj(cd.c);
+        const g=bubG.append('g').attr('class','bg').attr('data-co',cd.code)
+                    .attr('transform',`translate(${cx},${cy})`);
+        g.append('circle').attr('class','bubble').attr('r',rSc(cd.total))
+         .on('mouseover',ev=>showTip(ev,cd))
+         .on('mousemove',movTip).on('mouseout',hidTip)
+         .on('click',ev=>{ev.stopPropagation();openDrawer(cd.code);});
+        g.append('text').attr('class','clabel').attr('y',rSc(cd.total)+13).text(cd.code);
+    });
+    svg.on('click',closeDrawer);
+  })
+  .catch(()=>{
+    document.getElementById('loading').innerHTML=
+        '<p style="color:#fff">⚠ Could not load map tiles — check internet connection.</p>';
+  });
+
+function updBubbles(){
+    if(!bubG) return;
+    bubG.selectAll('.bg').each(function(){
+        const co=this.getAttribute('data-co');
+        const cd=CO_DATA.find(c=>c.code===co); if(!cd) return;
+        const vis=gSec ? cd.deals.filter(d=>d.sec===gSec) : cd.deals;
+        const drawn=vis.reduce((s,d)=>s+d.drn,0);
+        const r=vis.length ? rSc(drawn) : 0;
+        const sel=d3.select(this);
+        sel.select('circle').transition().duration(300)
+           .attr('r',Math.max(r,vis.length?5:0))
+           .attr('fill-opacity',vis.length?0.88:0.12);
+        sel.select('text').attr('y',Math.max(r,5)+13)
+           .attr('fill-opacity',vis.length?1:0.15);
+    });
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  TOOLTIP
+// ═══════════════════════════════════════════════════════════════
+const tipEl=document.getElementById('tip');
+function showTip(ev,cd){
+    const vis=gSec?cd.deals.filter(d=>d.sec===gSec):cd.deals;
+    const drawn=vis.reduce((s,d)=>s+d.drn,0);
+    const pct=(drawn/TOTAL*100).toFixed(1);
+    const secMap={};
+    vis.forEach(d=>{ secMap[d.sec]=(secMap[d.sec]||0)+d.drn; });
+    const top=Object.entries(secMap).sort((a,b)=>b[1]-a[1]).slice(0,4);
+    tipEl.innerHTML=`
+        <div class="tt-name">${cd.name}</div>
+        <div class="tt-row"><span class="tt-lbl">Deployed</span><span class="tt-val">${fmt(drawn)}</span></div>
+        <div class="tt-row"><span class="tt-lbl">Positions</span><span class="tt-val">${vis.length}</span></div>
+        <div class="tt-row"><span class="tt-lbl">% of Portfolio</span><span class="tt-val">${pct}%</span></div>
+        <hr class="tt-hr">
+        <div class="tt-secs">${top.map(([s,v])=>
+            `<span class="tt-dot" style="background:${SEC_CLR[s]}"></span>${s}&nbsp;<b>${(v/drawn*100).toFixed(0)}%</b><br>`
+        ).join('')}</div>
+        <div class="tt-hint">Click to explore → </div>`;
+    tipEl.classList.add('show'); movTip(ev);
+}
+function movTip(ev){
+    const x=ev.clientX+18, y=ev.clientY-20;
+    const tw=tipEl.offsetWidth, th=tipEl.offsetHeight;
+    tipEl.style.left=(x+tw>window.innerWidth?x-tw-36:x)+'px';
+    tipEl.style.top=(y+th>window.innerHeight?y-th:y)+'px';
+}
+function hidTip(){ tipEl.classList.remove('show'); }
+
+// ═══════════════════════════════════════════════════════════════
+//  DRAWER
+// ═══════════════════════════════════════════════════════════════
+function openDrawer(code){
+    dCo=code; dSec=null;
+    renderDrawer(code);
+    d3.selectAll('.bubble').classed('sel',false);
+    d3.selectAll(`.bg[data-co="${code}"] .bubble`).classed('sel',true);
+    document.getElementById('drawer').classList.add('open');
+    document.getElementById('overlay').classList.add('show');
+}
+
+function renderDrawer(code){
+    const cd=CO_DATA.find(c=>c.code===code); if(!cd) return;
+    const base=gSec?cd.deals.filter(d=>d.sec===gSec):cd.deals;
+    const drawn=base.reduce((s,d)=>s+d.drn,0);
+    const pct=(drawn/TOTAL*100).toFixed(1);
+    const avgY=base.length?(base.reduce((s,d)=>s+d.cy,0)/base.length).toFixed(1):'—';
+
+    document.getElementById('dCountry').textContent=cd.name;
+    document.getElementById('dSub').textContent=
+        gSec?`Filtered: ${gSec}`:'All Sectors · Click a sector bar to drill in';
+
+    document.getElementById('dStats').innerHTML=`
+        <div class="d-stat"><div class="v">${fmt(drawn)}</div><div class="l">Deployed</div></div>
+        <div class="d-stat"><div class="v">${base.length}</div><div class="l">Positions</div></div>
+        <div class="d-stat"><div class="v">${pct}%</div><div class="l">of Portfolio</div></div>
+        <div class="d-stat"><div class="v">${avgY}%</div><div class="l">Avg Yield</div></div>`;
+
+    // Sector bars
+    const secMap={};
+    base.forEach(d=>{ secMap[d.sec]=(secMap[d.sec]||0)+d.drn; });
+    const secRows=Object.entries(secMap).sort((a,b)=>b[1]-a[1]);
+    const maxS=secRows[0]?.[1]||1;
+    const secHTML=secRows.map(([sec,amt])=>{
+        const p=drawn?(amt/drawn*100).toFixed(1):0;
+        const bw=(amt/maxS*100).toFixed(1);
+        const dim=dSec&&dSec!==sec;
+        return `<div class="sec-row${dim?' dim':''}" onclick="toggleDS('${sec}')">
+            <div class="sec-name"><span class="sec-dot" style="background:${SEC_CLR[sec]}"></span>${sec}</div>
+            <div class="sec-bg"><div class="sec-bar" style="width:${bw}%;background:${SEC_CLR[sec]}"></div></div>
+            <div class="sec-pct">${p}%</div>
+            <div class="sec-amt">${fmt(amt)}</div>
+        </div>`;
+    }).join('');
+
+    // Deals table
+    const final=dSec?base.filter(d=>d.sec===dSec):base;
+    const secs=[...new Set(base.map(d=>d.sec))].sort();
+    const pills=`<span class="dp${!dSec?' on':''}" onclick="toggleDS(null)">All</span>`
+        +secs.map(s=>`<span class="dp${dSec===s?' on':''}"
+            style="${dSec===s?`background:${SEC_CLR[s]};border-color:${SEC_CLR[s]};color:#fff`:''}"
+            onclick="toggleDS('${s}')">${s}</span>`).join('');
+
+    const tbl=final.length===0
+        ?'<div class="empty">No deals match this filter.</div>'
+        :`<table class="dtbl">
+            <thead><tr><th>Obligor</th><th>Sector</th><th>Type</th>
+                <th style="text-align:right">Drawn</th><th style="text-align:right">Yield</th></tr></thead>
+            <tbody>${final.sort((a,b)=>b.drn-a.drn).map(d=>`
+            <tr>
+                <td style="font-weight:600;max-width:155px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.obl}</td>
+                <td><span style="color:${SEC_CLR[d.sec]};font-size:10px;font-weight:600">● ${d.sec}</span></td>
+                <td><span class="badge ${BADGE[d.ac]||'b-fl'}">${d.ac}</span></td>
+                <td style="text-align:right;font-weight:700;color:#1e40af">$${d.drn}M</td>
+                <td style="text-align:right;font-weight:700;color:#059669">${d.cy}%</td>
+            </tr>`).join('')}</tbody></table>`;
+
+    document.getElementById('dBody').innerHTML=`
+        <div class="stitle">Sector Allocation</div>
+        <div style="margin-bottom:20px">${secHTML}</div>
+        <div class="stitle">Deals (${final.length})</div>
+        <div class="d-pills">${pills}</div>${tbl}`;
+}
+
+function toggleDS(sec){ dSec=(dSec===sec?null:sec); if(dCo) renderDrawer(dCo); }
+
+function closeDrawer(){
+    dCo=null; dSec=null;
+    document.getElementById('drawer').classList.remove('open');
+    document.getElementById('overlay').classList.remove('show');
+    d3.selectAll('.bubble').classed('sel',false);
+}
+</script>
+</body>
+</html>
