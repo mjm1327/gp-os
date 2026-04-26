@@ -33,8 +33,6 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
   { label: 'Deal Flow', path: '/deal-flow', icon: '📈' },
   { label: 'Portfolio Monitoring', path: '/portfolio', icon: '💼' },
   { label: 'Covenant Monitoring', path: '/covenants', icon: '⚖️' },
-  { label: 'Documents', path: '/documents', icon: '📁' },
-  { label: 'Capital Accounting', path: '/capital', icon: '💰' },
   { label: 'Tasks', path: '/tasks', icon: '✓' },
 ];
 
