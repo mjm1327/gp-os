@@ -162,7 +162,7 @@ export default function Funds() {
     setIsExtracting(true);
     setExtractError('');
     try {
-      const resp = await fetch('http://localhost:3002/api/funds/extract', {
+      const resp = await fetch('https://gp-os-production.up.railway.app/api/funds/extract', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': key },
         body: JSON.stringify({ document_text: documentText }),
@@ -227,7 +227,7 @@ export default function Funds() {
         status: 'fundraising',
       };
 
-      const fundResp = await fetch('http://localhost:3002/api/funds', {
+      const fundResp = await fetch('https://gp-os-production.up.railway.app/api/funds', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(fundPayload),
@@ -242,7 +242,7 @@ export default function Funds() {
       // 2. Create vehicles
       for (const v of vehicles) {
         if (!v.name.trim()) continue;
-        await fetch(`http://localhost:3002/api/funds/${fundId}/vehicles`, {
+        await fetch(`https://gp-os-production.up.railway.app/api/funds/${fundId}/vehicles`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -257,7 +257,7 @@ export default function Funds() {
       // 3. Create share classes
       for (const sc of shareClassRows) {
         if (!sc.name.trim()) continue;
-        await fetch(`http://localhost:3002/api/funds/${fundId}/share-classes`, {
+        await fetch(`https://gp-os-production.up.railway.app/api/funds/${fundId}/share-classes`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -270,7 +270,7 @@ export default function Funds() {
       }
 
       // 4. Save document
-      await fetch(`http://localhost:3002/api/funds/${fundId}/documents`, {
+      await fetch(`https://gp-os-production.up.railway.app/api/funds/${fundId}/documents`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

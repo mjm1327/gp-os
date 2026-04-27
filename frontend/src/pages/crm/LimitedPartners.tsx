@@ -319,7 +319,7 @@ export default function LimitedPartners() {
     e.preventDefault();
     setSaving(true);
     try {
-      const resp = await fetch('http://localhost:3002/api/limited-partners', {
+      const resp = await fetch('https://gp-os-production.up.railway.app/api/limited-partners', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

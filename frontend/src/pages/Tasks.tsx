@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Layout from '../components/Layout';
 
-const API = 'http://localhost:3002';
+const API = 'https://gp-os-production.up.railway.app';
 const CURRENT_USER_ID = 1; // Sarah Chen — logged-in user
 
 const TASK_TYPE_LABELS: Record<string, string> = {

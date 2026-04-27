@@ -271,7 +271,7 @@ export default function IntelligenceDrawer() {
     setIsLoading(true);
 
     try {
-      const res = await fetch('http://localhost:3002/api/intelligence/chat', {
+      const res = await fetch('https://gp-os-production.up.railway.app/api/intelligence/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

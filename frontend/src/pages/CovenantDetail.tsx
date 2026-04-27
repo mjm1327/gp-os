@@ -2,7 +2,7 @@ import { useParams, useLocation, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import Layout from '../components/Layout';
 
-const API = 'http://localhost:3002';
+const API = 'https://gp-os-production.up.railway.app';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function fmt(n: number | null | undefined, suffix = 'M') {
@@ -183,14 +183,12 @@ export default function CovenantDetail() {
           {isDemoData && (
             <span className="px-2 py-1 bg-indigo-100 text-indigo-700 text-xs font-bold rounded-full">Demo Data</span>
           )}
-          {!isDemoData && (
-            <Link
-              to={`/portfolio/positions/${cov.deal_id}`}
-              className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-700 transition-colors"
-            >
-              View Full Position →
-            </Link>
-          )}
+          <Link
+            to={`/portfolio/positions/${cov.deal_id}`}
+            className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-700 transition-colors"
+          >
+            View Full Position →
+          </Link>
         </div>
       </div>
 

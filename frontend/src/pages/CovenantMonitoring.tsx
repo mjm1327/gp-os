@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import Layout from '../components/Layout';
 
-const API = 'http://localhost:3002';
+const API = 'https://gp-os-production.up.railway.app';
 const PAGE_SIZE = 25;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

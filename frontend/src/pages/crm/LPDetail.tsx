@@ -80,8 +80,8 @@ function ContactModal({ lpId, contact, onClose, onSaved }: ContactModalProps) {
     setError('');
     try {
       const url = isEdit
-        ? `http://localhost:3002/api/contacts/${contact.id}`
-        : `http://localhost:3002/api/contacts`;
+        ? `https://gp-os-production.up.railway.app/api/contacts/${contact.id}`
+        : `https://gp-os-production.up.railway.app/api/contacts`;
       const res = await fetch(url, {
         method: isEdit ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },

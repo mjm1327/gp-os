@@ -118,7 +118,7 @@ function LogCallWizard({ positionId, dealName, onClose, onSaved }: LogCallWizard
     setExtracting(true);
     setExtractError('');
     try {
-      const res = await fetch(`http://localhost:3002/api/portfolio/positions/${positionId}/ingest-call`, {
+      const res = await fetch(`https://gp-os-production.up.railway.app/api/portfolio/positions/${positionId}/ingest-call`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': key },
         body: JSON.stringify({ transcript, call_type: callType, call_date: callDate, participants }),
@@ -185,7 +185,7 @@ function LogCallWizard({ positionId, dealName, onClose, onSaved }: LogCallWizard
         }
       }
 
-      const res = await fetch(`http://localhost:3002/api/portfolio/positions/${positionId}/calls`, {
+      const res = await fetch(`https://gp-os-production.up.railway.app/api/portfolio/positions/${positionId}/calls`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -453,7 +453,7 @@ function TranscriptTaskWizard({ dealId, dealName, onClose, onSaved }: {
     const key = apiKey || localStorage.getItem('anthropic_api_key') || '';
     setExtracting(true); setExtractError('');
     try {
-      const res = await fetch('http://localhost:3002/api/tasks/extract', {
+      const res = await fetch('https://gp-os-production.up.railway.app/api/tasks/extract', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': key },
         body: JSON.stringify({ transcript, deal_id: dealId, participants }),
@@ -475,7 +475,7 @@ function TranscriptTaskWizard({ dealId, dealName, onClose, onSaved }: {
     setSaving(true); setSaveError('');
     try {
       const toSave = extractedTasks.filter(t => t.include);
-      const res = await fetch('http://localhost:3002/api/tasks/confirm', {
+      const res = await fetch('https://gp-os-production.up.railway.app/api/tasks/confirm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tasks: toSave, deal_id: dealId, created_by: 1 }),
@@ -821,14 +821,22 @@ function CovenantPanel({ covenant, dealId }: { covenant: any | null; dealId: num
         )}
       </div>
 
-      {/* Link to full dashboard */}
-      <div className="flex justify-end">
+      {/* Links */}
+      <div className="flex items-center justify-between">
         <Link
           to="/covenants"
-          className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
+          className="inline-flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
         >
-          View Full Covenant Dashboard →
+          ← Covenant Dashboard
         </Link>
+        {covenant.id && (
+          <Link
+            to={`/covenants/${covenant.id}`}
+            className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
+          >
+            View Full Covenant Detail →
+          </Link>
+        )}
       </div>
     </div>
   );
@@ -1140,7 +1148,7 @@ export default function PositionDetail() {
   const { data: tasksData, refetch: refetchTasks } = useQuery({
     queryKey: ['deal-tasks', id],
     queryFn: async () => {
-      const res = await fetch(`http://localhost:3002/api/tasks?deal_id=${id}`);
+      const res = await fetch(`https://gp-os-production.up.railway.app/api/tasks?deal_id=${id}`);
       return res.json();
     },
     enabled: !!id,
@@ -1149,7 +1157,7 @@ export default function PositionDetail() {
   const { data: covenantData } = useQuery({
     queryKey: ['deal-covenants', id],
     queryFn: async () => {
-      const res = await fetch(`http://localhost:3002/api/portfolio/covenants?deal_id=${id}`);
+      const res = await fetch(`https://gp-os-production.up.railway.app/api/portfolio/covenants?deal_id=${id}`);
       const json = await res.json();
       return json.covenants?.[0] ?? null;
     },
@@ -1160,7 +1168,7 @@ export default function PositionDetail() {
   const [usersLoaded, setUsersLoaded] = useState(false);
   if (!usersLoaded) {
     setUsersLoaded(true);
-    fetch('http://localhost:3002/api/tasks/users').then(r => r.json()).then(setUsers).catch(() => {});
+    fetch('https://gp-os-production.up.railway.app/api/tasks/users').then(r => r.json()).then(setUsers).catch(() => {});
   }
 
   const tasks: any[] = tasksData || [];
@@ -1189,7 +1197,7 @@ export default function PositionDetail() {
 
   const handleTaskStatusToggle = async (task: any) => {
     const newStatus = task.status === 'complete' ? 'open' : 'complete';
-    await fetch(`http://localhost:3002/api/tasks/${task.id}`, {
+    await fetch(`https://gp-os-production.up.railway.app/api/tasks/${task.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: newStatus }),
@@ -1200,7 +1208,7 @@ export default function PositionDetail() {
   const handleAddTask = async () => {
     if (!newTask.title.trim()) return;
     setAddingTask(true);
-    await fetch('http://localhost:3002/api/tasks', {
+    await fetch('https://gp-os-production.up.railway.app/api/tasks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

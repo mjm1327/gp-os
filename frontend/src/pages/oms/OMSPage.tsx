@@ -117,7 +117,7 @@ export default function OMSPage() {
 
   const loadFunds = async () => {
     try {
-      const response = await fetch('http://localhost:3002/api/funds');
+      const response = await fetch('https://gp-os-production.up.railway.app/api/funds');
       const data = await response.json();
       setFunds(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -127,7 +127,7 @@ export default function OMSPage() {
 
   const loadVehiclesForFund = async (fundId: string) => {
     try {
-      const response = await fetch(`http://localhost:3002/api/investment-vehicles?fund_id=${fundId}`);
+      const response = await fetch(`https://gp-os-production.up.railway.app/api/investment-vehicles?fund_id=${fundId}`);
       const data = await response.json();
       setVehicles(Array.isArray(data) ? data : []);
       setSelectedVehicle('');
@@ -138,7 +138,7 @@ export default function OMSPage() {
 
   const loadShareClassesForVehicle = async (vehicleId: string) => {
     try {
-      const response = await fetch(`http://localhost:3002/api/investment-vehicles/${vehicleId}/share-classes`);
+      const response = await fetch(`https://gp-os-production.up.railway.app/api/investment-vehicles/${vehicleId}/share-classes`);
       const data = await response.json();
       setShareClasses(Array.isArray(data) ? data : []);
       setSelectedShareClass('');
@@ -174,7 +174,7 @@ export default function OMSPage() {
 
     try {
       const key = apiKey || localStorage.getItem('anthropic_api_key') || '';
-      const response = await fetch('http://localhost:3002/api/oms/extract', {
+      const response = await fetch('https://gp-os-production.up.railway.app/api/oms/extract', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -212,7 +212,7 @@ export default function OMSPage() {
     setIsCreating(true);
 
     try {
-      const response = await fetch('http://localhost:3002/api/oms/confirm', {
+      const response = await fetch('https://gp-os-production.up.railway.app/api/oms/confirm', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

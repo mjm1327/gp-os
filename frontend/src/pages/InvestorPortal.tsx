@@ -110,7 +110,7 @@ export default function InvestorPortal() {
     setChatMessages(prev => [...prev, { role: 'user', content: q }]);
     setChatLoading(true);
     try {
-      const resp = await fetch(`http://localhost:3002/api/investor-access/${token}/ask`, {
+      const resp = await fetch(`https://gp-os-production.up.railway.app/api/investor-access/${token}/ask`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question: q }),
@@ -128,7 +128,7 @@ export default function InvestorPortal() {
   };
 
   useEffect(() => {
-    fetch(`http://localhost:3002/api/investor-access/${token}`)
+    fetch(`https://gp-os-production.up.railway.app/api/investor-access/${token}`)
       .then(r => {
         if (!r.ok) throw new Error('Invalid or expired access link');
         return r.json();

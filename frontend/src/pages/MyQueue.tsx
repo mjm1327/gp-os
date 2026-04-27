@@ -57,7 +57,7 @@ export default function MyQueue() {
   const { data: tasks = [], refetch } = useQuery<Task[]>({
     queryKey: ['my-tasks', CURRENT_USER_ID],
     queryFn: async () => {
-      const res = await fetch(`http://localhost:3002/api/tasks?assigned_to=${CURRENT_USER_ID}`);
+      const res = await fetch(`https://gp-os-production.up.railway.app/api/tasks?assigned_to=${CURRENT_USER_ID}`);
       return res.json();
     },
     refetchInterval: 30000,
@@ -65,7 +65,7 @@ export default function MyQueue() {
 
   const toggleStatus = async (task: Task) => {
     const newStatus = task.status === 'complete' ? 'open' : 'complete';
-    await fetch(`http://localhost:3002/api/tasks/${task.id}`, {
+    await fetch(`https://gp-os-production.up.railway.app/api/tasks/${task.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: newStatus }),

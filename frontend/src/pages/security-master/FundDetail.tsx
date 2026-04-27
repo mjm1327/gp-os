@@ -185,7 +185,7 @@ export default function FundDetail() {
   const handleGenerateLink = async () => {
     setShareLoading(true);
     try {
-      const resp = await fetch('http://localhost:3002/api/investor-access', {
+      const resp = await fetch('https://gp-os-production.up.railway.app/api/investor-access', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fund_id: fundId, recipient_email: shareEmail || null }),
