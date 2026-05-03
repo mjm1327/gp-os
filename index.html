@@ -1,0 +1,1376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GP Operating System — Stonecrest Capital</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --navy:#0f172a; --navy2:#1e3a8a; --blue:#1e40af; --accent:#3b82f6;
+  --success:#10b981; --warning:#f59e0b; --danger:#ef4444;
+  --border:#e5e7eb; --bg:#f9fafb; --white:#fff;
+  --text:#1f2937; --muted:#6b7280;
+  --sidebar-w:224px;
+}
+body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+       background:var(--bg); color:var(--text); height:100vh;
+       display:flex; flex-direction:column; overflow:hidden; }
+
+/* ── TOP HEADER ── */
+.top-header {
+  background:linear-gradient(135deg,var(--navy),var(--navy2));
+  color:#fff; padding:0 20px; height:48px;
+  display:flex; align-items:center; justify-content:space-between;
+  flex-shrink:0; z-index:20; position:relative;
+}
+.th-brand { display:flex; align-items:center; gap:10px; }
+.th-brand-name { font-size:16px; font-weight:700; }
+.th-brand-firm { font-size:11px; opacity:.55; margin-left:4px; }
+.th-right { display:flex; align-items:center; gap:10px; }
+.api-inp { padding:6px 11px; border:1px solid rgba(255,255,255,.22);
+           border-radius:6px; background:rgba(255,255,255,.1); color:#fff;
+           font-size:12px; width:200px; }
+.api-inp::placeholder { color:rgba(255,255,255,.45); }
+.api-inp:focus { outline:none; border-color:var(--accent); }
+.api-badge { font-size:11px; padding:3px 9px; border-radius:20px; font-weight:500;
+             background:rgba(16,185,129,.2); color:#6ee7b7; white-space:nowrap; }
+.api-badge.off { background:rgba(239,68,68,.2); color:#fca5a5; }
+
+/* ── BODY LAYOUT ── */
+.app-body { display:flex; flex:1; overflow:hidden; }
+
+/* ── SIDEBAR ── */
+.sidebar {
+  width:var(--sidebar-w); background:var(--navy); color:#fff;
+  flex-shrink:0; overflow-y:auto; display:flex; flex-direction:column;
+}
+.sidebar-header { padding:16px 16px 12px; border-bottom:1px solid rgba(255,255,255,.08); }
+.sidebar-header .firm { font-size:13px; font-weight:600; }
+.sidebar-header .sub  { font-size:10px; opacity:.45; margin-top:2px; }
+.sidebar-section { padding:16px 0 8px; }
+.sidebar-label { font-size:9px; font-weight:700; letter-spacing:.8px;
+                 color:rgba(255,255,255,.35); padding:0 16px 6px; text-transform:uppercase; }
+.nav-item {
+  display:flex; align-items:center; gap:9px;
+  padding:8px 16px; font-size:13px; color:rgba(255,255,255,.7);
+  cursor:pointer; transition:all .15s; border:none; background:none;
+  width:100%; text-align:left;
+}
+.nav-item:hover { background:rgba(255,255,255,.07); color:#fff; }
+.nav-item.active { background:rgba(59,130,246,.2); color:#fff; font-weight:500; }
+.nav-item .icon { font-size:14px; flex-shrink:0; width:18px; text-align:center; }
+.nav-child { padding:5px 16px 5px 43px; font-size:12px; color:rgba(255,255,255,.55);
+             cursor:pointer; transition:all .15s; display:block; }
+.nav-child:hover { color:#fff; }
+.nav-child.active { color:var(--accent); font-weight:500; }
+.nav-group-toggle { display:flex; align-items:center; justify-content:space-between; }
+.nav-chevron { font-size:9px; opacity:.5; transition:transform .2s; }
+.nav-chevron.open { transform:rotate(180deg); }
+.nav-children { overflow:hidden; }
+
+/* ── MAIN CONTENT ── */
+.main { flex:1; overflow:hidden; display:flex; flex-direction:column; }
+.page { display:none; flex:1; overflow-y:auto; padding:24px; flex-direction:column; gap:20px; }
+.page.active { display:flex; }
+.page-full { display:none; flex:1; overflow:hidden; }
+.page-full.active { display:flex; }
+
+/* Page header */
+.page-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+.page-title { font-size:22px; font-weight:700; color:var(--navy); letter-spacing:-.4px; }
+.page-sub { font-size:13px; color:var(--muted); margin-top:3px; }
+
+/* ── CARDS & PANELS ── */
+.card { background:var(--white); border:1px solid var(--border); border-radius:8px; }
+.card-head { padding:14px 18px; border-bottom:1px solid var(--border);
+             display:flex; align-items:center; justify-content:space-between; }
+.card-title { font-size:13px; font-weight:600; color:var(--navy); display:flex; align-items:center; gap:7px; }
+.card-body { padding:18px; }
+
+/* ── STAT CARDS ── */
+.stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+.stats-grid.five { grid-template-columns:repeat(5,1fr); }
+.stat-card { background:var(--white); border:1px solid var(--border);
+             border-radius:8px; padding:14px 16px; border-left:3px solid var(--blue); }
+.stat-label { font-size:9px; color:var(--muted); text-transform:uppercase;
+              letter-spacing:.6px; font-weight:700; margin-bottom:6px; }
+.stat-value { font-size:20px; font-weight:700; color:var(--navy); }
+.stat-delta { font-size:11px; margin-top:3px; }
+.delta-up { color:var(--success); } .delta-dn { color:var(--danger); }
+
+/* ── TABLE ── */
+.tbl-wrap { overflow-x:auto; }
+table { width:100%; border-collapse:collapse; font-size:13px; }
+thead th { background:var(--bg); padding:9px 14px; text-align:left; font-size:10px;
+           font-weight:700; color:var(--muted); border-bottom:2px solid var(--border);
+           text-transform:uppercase; letter-spacing:.4px; white-space:nowrap;
+           cursor:pointer; user-select:none; }
+thead th:hover { background:#f0f1f3; color:var(--text); }
+tbody td { padding:10px 14px; border-bottom:1px solid var(--border); }
+tbody tr:last-child td { border-bottom:none; }
+tbody tr:hover td { background:var(--bg); }
+
+/* ── BADGES ── */
+.badge { display:inline-block; padding:3px 8px; border-radius:10px;
+         font-size:11px; font-weight:600; white-space:nowrap; }
+.b-fl  { background:#dbeafe; color:#1e40af; }
+.b-sl  { background:#fce7f3; color:#be185d; }
+.b-mz  { background:#fef3c7; color:#92400e; }
+.b-eq  { background:#d1fae5; color:#065f46; }
+.b-ut  { background:#ede9fe; color:#5b21b6; }
+.b-ok  { background:rgba(16,185,129,.1);  color:#047857; }
+.b-warn{ background:rgba(245,158,11,.1);  color:#92400e; }
+.b-err { background:rgba(239,68,68,.1);   color:#991b1b; }
+.b-info{ background:rgba(59,130,246,.1);  color:#1e40af; }
+.b-neu { background:var(--bg); color:var(--muted); border:1px solid var(--border); }
+
+/* ── BUTTONS ── */
+.btn { padding:7px 14px; border:none; border-radius:6px; font-size:12px;
+       font-weight:500; cursor:pointer; display:inline-flex; align-items:center;
+       gap:6px; transition:all .18s; font-family:inherit; }
+.btn-primary { background:var(--blue); color:#fff; }
+.btn-primary:hover { background:#1d3a8a; }
+.btn-secondary { background:var(--bg); color:var(--text); border:1px solid var(--border); }
+.btn-secondary:hover { background:#f0f1f3; }
+.btn-success { background:var(--success); color:#fff; }
+
+/* ── DASHBOARD ACTIVITY ── */
+.activity-item { display:flex; gap:12px; padding:10px 0; border-bottom:1px solid var(--border); }
+.activity-item:last-child { border-bottom:none; }
+.act-dot { width:8px; height:8px; border-radius:50%; margin-top:5px; flex-shrink:0; }
+.act-text { font-size:13px; line-height:1.5; }
+.act-time { font-size:11px; color:var(--muted); }
+
+/* ── DEAL CARDS ── */
+.deal-card { background:var(--white); border:1px solid var(--border);
+             border-radius:8px; padding:18px; }
+.deal-head { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px; }
+.deal-name { font-size:15px; font-weight:700; color:var(--navy); }
+.deal-borrower { font-size:12px; color:var(--muted); margin-top:2px; }
+.deal-metrics { display:grid; grid-template-columns:repeat(4,1fr); gap:0;
+                border-top:1px solid var(--border); border-bottom:1px solid var(--border);
+                padding:12px 0; margin-bottom:12px; }
+.deal-metric { padding:0 14px; border-right:1px solid var(--border); }
+.deal-metric:first-child { padding-left:0; }
+.deal-metric:last-child { border-right:none; }
+.dm-label { font-size:9px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; font-weight:700; }
+.dm-value { font-size:13px; font-weight:600; color:var(--text); margin-top:3px; }
+
+/* ── LP PROFILE ── */
+.lp-row { display:flex; align-items:center; gap:10px; padding:10px 14px;
+           border-bottom:1px solid var(--border); cursor:pointer; }
+.lp-row:hover { background:var(--bg); }
+.lp-avatar { width:32px; height:32px; border-radius:50%; background:var(--blue);
+             color:#fff; display:flex; align-items:center; justify-content:center;
+             font-size:12px; font-weight:700; flex-shrink:0; }
+
+/* ── DOCUMENT LIST ── */
+.doc-row { display:flex; align-items:center; gap:12px; padding:10px 0;
+           border-bottom:1px solid var(--border); }
+.doc-row:last-child { border-bottom:none; }
+.doc-icon { font-size:20px; flex-shrink:0; }
+.doc-name { font-size:13px; font-weight:500; color:var(--text); }
+.doc-meta { font-size:11px; color:var(--muted); }
+
+/* ── QUEUE ITEMS ── */
+.queue-item { display:flex; align-items:center; gap:14px; padding:12px;
+              border:1px solid var(--border); border-radius:7px;
+              background:var(--white); margin-bottom:8px; }
+.q-priority { width:4px; height:40px; border-radius:2px; flex-shrink:0; }
+.q-text { flex:1; }
+.q-title { font-size:13px; font-weight:500; color:var(--text); }
+.q-sub { font-size:11px; color:var(--muted); margin-top:2px; }
+.q-due { font-size:11px; color:var(--muted); text-align:right; white-space:nowrap; }
+
+/* ── PORTFOLIO SUB-NAV ── */
+.sub-nav { display:flex; gap:2px; background:var(--bg); border:1px solid var(--border);
+           border-radius:7px; padding:3px; align-self:flex-start; }
+.sub-nav-btn { padding:5px 14px; border-radius:5px; font-size:12px; font-weight:500;
+               cursor:pointer; border:none; background:transparent; color:var(--muted); transition:all .15s; }
+.sub-nav-btn.active { background:var(--white); color:var(--blue); font-weight:600;
+                      box-shadow:0 1px 3px rgba(0,0,0,.08); }
+
+/* ── AI ANALYSIS ── */
+textarea#queryInput { width:100%; padding:12px 14px; border:1.5px solid var(--border);
+                      border-radius:6px; font-family:inherit; font-size:14px;
+                      resize:vertical; min-height:90px; transition:border-color .2s; }
+textarea#queryInput:focus { outline:none; border-color:var(--blue); }
+.pills { display:flex; flex-wrap:wrap; gap:7px; margin:10px 0 14px; }
+.pill { background:#f0f4ff; color:var(--blue); padding:5px 11px;
+        border-radius:20px; font-size:12px; cursor:pointer;
+        border:1px solid #dbeafe; transition:all .2s; }
+.pill:hover { background:var(--blue); color:#fff; border-color:var(--blue); }
+.result-card { background:var(--white); border:1px solid var(--border); border-radius:8px; padding:20px; }
+.conf-badge { display:inline-block; padding:3px 10px; border-radius:4px;
+              font-size:11px; font-weight:600; margin-bottom:12px; }
+.conf-high{background:rgba(16,185,129,.1);color:#047857}
+.conf-med{background:rgba(245,158,11,.1);color:#92400e}
+.conf-low{background:rgba(239,68,68,.1);color:#991b1b}
+.result-text { line-height:1.8; font-size:14px; margin-bottom:16px; }
+.expand-hd { display:flex; align-items:center; gap:8px; padding:9px 12px;
+             background:var(--bg); border-radius:6px; cursor:pointer; font-weight:600;
+             font-size:12px; user-select:none; margin-bottom:1px; }
+.expand-hd:hover { background:#e5e7eb; }
+.chevron { transition:transform .25s; display:inline-block; }
+.expand-hd.open .chevron { transform:rotate(180deg); }
+.expand-body { display:none; padding:12px; background:var(--bg); border:1px solid var(--border);
+               border-top:none; border-radius:0 0 6px 6px; font-size:13px; line-height:1.7; }
+.expand-body.show { display:block; }
+.result-actions { display:flex; gap:10px; margin-top:14px; padding-top:14px;
+                  border-top:1px solid var(--border); }
+
+/* ── SPINNER ── */
+.spinner { display:inline-block; width:14px; height:14px; border:2px solid #e5e7eb;
+           border-top-color:var(--blue); border-radius:50%; animation:sp .7s linear infinite; }
+@keyframes sp { to { transform:rotate(360deg); } }
+
+/* ── MODAL ── */
+.modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45);
+         z-index:1000; align-items:center; justify-content:center; }
+.modal.show { display:flex; }
+.modal-box { background:#fff; border-radius:10px; padding:24px; max-width:460px;
+             width:90%; box-shadow:0 20px 40px rgba(0,0,0,.15); }
+.modal-title { font-size:16px; font-weight:600; margin-bottom:16px; }
+.form-grp { margin-bottom:12px; }
+.form-grp label { display:block; margin-bottom:5px; font-weight:500; font-size:12px; }
+.form-grp input,.form-grp select { width:100%; padding:8px 11px; border:1px solid var(--border);
+                                    border-radius:6px; font-size:13px; font-family:inherit; }
+.form-grp input:focus,.form-grp select:focus { outline:none; border-color:var(--blue); }
+.modal-actions { display:flex; gap:10px; margin-top:18px; }
+.btn-cancel { flex:1; background:var(--bg); color:var(--text); border:1px solid var(--border); }
+
+.hidden { display:none !important; }
+#csvFile { display:none; }
+
+/* ── CONCENTRATION / YIELD HIGHLIGHTS ── */
+.hi-red  { background:rgba(239,68,68,.08); color:#991b1b; font-weight:500; }
+.hi-amber{ background:rgba(245,158,11,.08); color:#92400e; font-weight:500; }
+
+/* Map iframe */
+#map-iframe { width:100%; height:100%; border:none; display:block; }
+
+@media(max-width:1100px){ .stats-grid { grid-template-columns:repeat(3,1fr); } }
+@media(max-width:800px) { .stats-grid { grid-template-columns:repeat(2,1fr); }
+                          .deal-metrics { grid-template-columns:repeat(2,1fr); } }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════
+     PASSWORD GATE — change the value of PW below to set
+     your own password. Anyone with the link will see this
+     screen first; enter the password to unlock the app.
+     ══════════════════════════════════════════════════════ -->
+<div id="pw-gate" style="
+  position:fixed;inset:0;z-index:9999;
+  background:linear-gradient(135deg,#0f172a 0%,#1e3a8a 100%);
+  display:flex;align-items:center;justify-content:center;
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+">
+  <div style="
+    background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
+    border-radius:16px;padding:48px 44px;width:360px;text-align:center;
+    box-shadow:0 24px 64px rgba(0,0,0,.5);
+  ">
+    <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:8px;">
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+        <rect width="28" height="28" rx="7" fill="#3b82f6"/>
+        <path d="M7 14h14M14 7v14" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+      <span style="color:#fff;font-size:20px;font-weight:700;letter-spacing:-.3px;">GP Operating System</span>
+    </div>
+    <p style="color:rgba(255,255,255,.45);font-size:13px;margin-bottom:32px;">Private preview — enter password to continue</p>
+
+    <input id="pw-input" type="password" placeholder="Password"
+      autocomplete="current-password" style="
+      width:100%;padding:12px 16px;border-radius:8px;border:1px solid rgba(255,255,255,.18);
+      background:rgba(255,255,255,.08);color:#fff;font-size:15px;outline:none;
+      margin-bottom:12px;box-sizing:border-box;letter-spacing:.05em;
+    "/>
+    <div id="pw-error" style="
+      color:#fca5a5;font-size:12px;margin-bottom:10px;min-height:16px;
+    "></div>
+    <button onclick="checkPassword()" style="
+      width:100%;padding:12px;border-radius:8px;border:none;cursor:pointer;
+      background:#3b82f6;color:#fff;font-size:15px;font-weight:600;
+      transition:background .15s;
+    " onmouseover="this.style.background='#2563eb'" onmouseout="this.style.background='#3b82f6'">
+      Unlock
+    </button>
+  </div>
+</div>
+
+<script>
+(function(){
+  const PW = 'gpos2026'; // ← change this to update the password
+
+  // If already unlocked this session, skip the gate immediately
+  if(sessionStorage.getItem('gpos_unlocked')==='1'){
+    document.getElementById('pw-gate').style.display='none';
+  }
+
+  document.getElementById('pw-input').addEventListener('keydown',function(e){
+    if(e.key==='Enter') checkPassword();
+  });
+
+  window.checkPassword = function(){
+    const val = document.getElementById('pw-input').value;
+    const err = document.getElementById('pw-error');
+    if(val === PW){
+      sessionStorage.setItem('gpos_unlocked','1');
+      const gate = document.getElementById('pw-gate');
+      gate.style.transition='opacity .4s ease';
+      gate.style.opacity='0';
+      setTimeout(()=>gate.style.display='none', 400);
+    } else {
+      err.textContent = 'Incorrect password — try again';
+      document.getElementById('pw-input').value='';
+      document.getElementById('pw-input').focus();
+      setTimeout(()=>err.textContent='', 3000);
+    }
+  };
+})();
+</script>
+
+<!-- ── TOP HEADER ── -->
+<header class="top-header">
+  <div class="th-brand">
+    <span style="font-size:18px">⚡</span>
+    <span class="th-brand-name">GP Operating System</span>
+    <span class="th-brand-firm">· Stonecrest Capital</span>
+  </div>
+  <div class="th-right">
+    <input type="password" id="apiKeyInput" class="api-inp" placeholder="Anthropic API Key">
+    <div class="api-badge off" id="apiStatus">Not Connected</div>
+  </div>
+</header>
+
+<!-- ── APP BODY ── -->
+<div class="app-body">
+
+<!-- ── SIDEBAR ── -->
+<aside class="sidebar">
+  <div class="sidebar-header">
+    <div class="firm">Stonecrest Capital</div>
+    <div class="sub">Fund III · $2.4B AUM</div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">Overview</div>
+    <div class="nav-item active" onclick="nav('dashboard',this)">
+      <span class="icon">📊</span> Dashboard
+    </div>
+    <div class="nav-item" onclick="nav('queue',this)">
+      <span class="icon">✓</span> My Queue
+      <span style="margin-left:auto;background:var(--danger);color:#fff;font-size:9px;
+                   padding:1px 6px;border-radius:10px;font-weight:700;">4</span>
+    </div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">Fund Setup</div>
+    <div class="nav-item" onclick="toggleGroup('security-master',this)">
+      <span class="icon">🏛️</span>
+      <span class="nav-group-toggle" style="flex:1;display:flex;justify-content:space-between;">
+        Security Master <span class="nav-chevron" id="chev-security-master">▼</span>
+      </span>
+    </div>
+    <div class="nav-children" id="grp-security-master" style="display:none">
+      <div class="nav-child" onclick="nav('asset-classes',this)">Asset Classes</div>
+      <div class="nav-child" onclick="nav('funds',this)">Funds</div>
+      <div class="nav-child" onclick="nav('vehicles',this)">Investment Vehicles</div>
+    </div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">Investor Relations</div>
+    <div class="nav-item" onclick="toggleGroup('lp-mgmt',this)">
+      <span class="icon">👥</span>
+      <span class="nav-group-toggle" style="flex:1;display:flex;justify-content:space-between;">
+        LP Management <span class="nav-chevron" id="chev-lp-mgmt">▼</span>
+      </span>
+    </div>
+    <div class="nav-children" id="grp-lp-mgmt" style="display:none">
+      <div class="nav-child" onclick="nav('limited-partners',this)">Limited Partners</div>
+      <div class="nav-child" onclick="nav('contacts',this)">Contacts</div>
+    </div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">Deal Management</div>
+    <div class="nav-item" onclick="nav('oms',this)">
+      <span class="icon">📋</span> Order Management
+    </div>
+    <div class="nav-item" onclick="nav('deal-flow',this)">
+      <span class="icon">📈</span> Deal Flow
+    </div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">Portfolio</div>
+    <div class="nav-item" onclick="nav('portfolio',this)">
+      <span class="icon">💼</span> Portfolio Monitoring
+    </div>
+    <div class="nav-item" onclick="nav('geo',this)">
+      <span class="icon">🌍</span> Geographic View
+    </div>
+    <div class="nav-item" onclick="nav('capital',this)">
+      <span class="icon">💰</span> Capital Accounting
+    </div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">Operations</div>
+    <div class="nav-item" onclick="nav('documents',this)">
+      <span class="icon">📁</span> Documents
+    </div>
+    <div class="nav-item" onclick="nav('ai',this)">
+      <span class="icon">💬</span> AI Analysis
+    </div>
+  </div>
+</aside>
+
+<!-- ── MAIN CONTENT ── -->
+<main class="main">
+
+<!-- ════════════════════════════════════════════
+     DASHBOARD
+════════════════════════════════════════════ -->
+<div id="page-dashboard" class="page active">
+  <div class="page-head">
+    <div><div class="page-title">Dashboard</div>
+         <div class="page-sub">Stonecrest Capital Fund III — as of Q3 2024</div></div>
+    <button class="btn btn-secondary">⬇ Export Report</button>
+  </div>
+  <div class="stats-grid">
+    <div class="stat-card" style="border-color:var(--blue)">
+      <div class="stat-label">Total AUM</div>
+      <div class="stat-value">$2.4B</div>
+      <div class="stat-delta delta-up">↑ $180M vs. prior quarter</div>
+    </div>
+    <div class="stat-card" style="border-color:var(--success)">
+      <div class="stat-label">Deployed Capital</div>
+      <div class="stat-value">$1.96B</div>
+      <div class="stat-delta delta-up">81.7% utilization</div>
+    </div>
+    <div class="stat-card" style="border-color:var(--warning)">
+      <div class="stat-label">Active Positions</div>
+      <div class="stat-value">47</div>
+      <div class="stat-delta">Across 12 sectors</div>
+    </div>
+    <div class="stat-card" style="border-color:var(--accent)">
+      <div class="stat-label">Portfolio Yield (Lev.)</div>
+      <div class="stat-value">10.3%</div>
+      <div class="stat-delta delta-up">↑ 40bps vs. prior quarter</div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">📋 Recent Activity</div>
+        <span style="font-size:11px;color:var(--muted)">Last 7 days</span>
+      </div>
+      <div class="card-body" id="activityFeed"></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><div class="card-title">📈 Pipeline Summary</div></div>
+      <div class="card-body">
+        <table style="width:100%;font-size:13px">
+          <thead><tr>
+            <th style="text-align:left;padding:6px 0;font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;border-bottom:1px solid var(--border)">Status</th>
+            <th style="text-align:right;padding:6px 0;font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;border-bottom:1px solid var(--border)"># Deals</th>
+            <th style="text-align:right;padding:6px 0;font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;border-bottom:1px solid var(--border)">Total ($M)</th>
+          </tr></thead>
+          <tbody id="pipelineSummary"></tbody>
+        </table>
+        <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border)">
+          <div class="stat-label" style="margin-bottom:8px">Asset Class Mix</div>
+          <div id="acMix"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     MY QUEUE
+════════════════════════════════════════════ -->
+<div id="page-queue" class="page">
+  <div class="page-head">
+    <div><div class="page-title">My Queue</div>
+         <div class="page-sub">Tasks and approvals requiring your attention</div></div>
+    <button class="btn btn-primary">+ New Task</button>
+  </div>
+  <div id="queueList"></div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     ASSET CLASSES
+════════════════════════════════════════════ -->
+<div id="page-asset-classes" class="page">
+  <div class="page-head">
+    <div><div class="page-title">Asset Classes</div>
+         <div class="page-sub">Security master — instrument types and strategies</div></div>
+    <button class="btn btn-primary">+ Add Asset Class</button>
+  </div>
+  <div class="card">
+    <div class="tbl-wrap">
+      <table><thead><tr>
+        <th>Asset Class</th><th>Strategy</th><th>Seniority</th>
+        <th>Active Positions</th><th>Exposure ($M)</th><th>Avg Yield</th>
+      </tr></thead>
+      <tbody id="assetClassTable"></tbody></table>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     FUNDS
+════════════════════════════════════════════ -->
+<div id="page-funds" class="page">
+  <div class="page-head">
+    <div><div class="page-title">Funds</div>
+         <div class="page-sub">Stonecrest Capital fund vehicles</div></div>
+    <button class="btn btn-primary">+ New Fund</button>
+  </div>
+  <div class="card">
+    <div class="tbl-wrap">
+      <table><thead><tr>
+        <th>Fund</th><th>Vintage</th><th>Strategy</th>
+        <th>AUM ($M)</th><th>Deployed ($M)</th><th>Utilization</th><th>Status</th>
+      </tr></thead>
+      <tbody id="fundsTable"></tbody></table>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     INVESTMENT VEHICLES
+════════════════════════════════════════════ -->
+<div id="page-vehicles" class="page">
+  <div class="page-head">
+    <div><div class="page-title">Investment Vehicles</div>
+         <div class="page-sub">SPVs, CLOs, SMAs and other structures</div></div>
+    <button class="btn btn-primary">+ Add Vehicle</button>
+  </div>
+  <div class="card">
+    <div class="tbl-wrap">
+      <table><thead><tr>
+        <th>Vehicle Name</th><th>Type</th><th>Parent Fund</th>
+        <th>Committed ($M)</th><th>Deployed ($M)</th><th>Status</th>
+      </tr></thead>
+      <tbody id="vehiclesTable"></tbody></table>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     LIMITED PARTNERS
+════════════════════════════════════════════ -->
+<div id="page-limited-partners" class="page">
+  <div class="page-head">
+    <div><div class="page-title">Limited Partners</div>
+         <div class="page-sub">Investor commitments and capital accounts</div></div>
+    <button class="btn btn-primary">+ Add LP</button>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">
+    <div class="stat-card"><div class="stat-label">Total LPs</div><div class="stat-value" id="lpCount">—</div></div>
+    <div class="stat-card"><div class="stat-label">Total Committed</div><div class="stat-value" id="lpCommitted">—</div></div>
+    <div class="stat-card"><div class="stat-label">Avg Commitment</div><div class="stat-value" id="lpAvg">—</div></div>
+  </div>
+  <div class="card">
+    <div class="tbl-wrap">
+      <table><thead><tr>
+        <th>Investor</th><th>Type</th><th>Commitment ($M)</th>
+        <th>Called ($M)</th><th>% Called</th><th>Distributions ($M)</th><th>Status</th>
+      </tr></thead>
+      <tbody id="lpTable"></tbody></table>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     CONTACTS
+════════════════════════════════════════════ -->
+<div id="page-contacts" class="page">
+  <div class="page-head">
+    <div><div class="page-title">Contacts</div>
+         <div class="page-sub">LP contacts, advisors and counterparties</div></div>
+    <button class="btn btn-primary">+ Add Contact</button>
+  </div>
+  <div class="card">
+    <div class="tbl-wrap">
+      <table><thead><tr>
+        <th>Name</th><th>Organization</th><th>Role</th>
+        <th>Type</th><th>Email</th><th>Last Contact</th>
+      </tr></thead>
+      <tbody id="contactsTable"></tbody></table>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     ORDER MANAGEMENT
+════════════════════════════════════════════ -->
+<div id="page-oms" class="page">
+  <div class="page-head">
+    <div><div class="page-title">Order Management</div>
+         <div class="page-sub">Trade orders, settlements and allocations</div></div>
+    <button class="btn btn-primary">+ New Order</button>
+  </div>
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-label">Pending Orders</div><div class="stat-value">8</div></div>
+    <div class="stat-card"><div class="stat-label">Settled (MTD)</div><div class="stat-value">23</div></div>
+    <div class="stat-card"><div class="stat-label">Volume (MTD)</div><div class="stat-value">$312M</div></div>
+    <div class="stat-card"><div class="stat-label">Failed / Breaks</div><div class="stat-value" style="color:var(--danger)">2</div></div>
+  </div>
+  <div class="card">
+    <div class="tbl-wrap">
+      <table><thead><tr>
+        <th>Order ID</th><th>Obligor</th><th>Instrument</th><th>Direction</th>
+        <th>Amount ($M)</th><th>Price</th><th>Date</th><th>Status</th>
+      </tr></thead>
+      <tbody id="omsTable"></tbody></table>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     DEAL FLOW
+════════════════════════════════════════════ -->
+<div id="page-deal-flow" class="page">
+  <div class="page-head">
+    <div><div class="page-title">Deal Flow</div>
+         <div class="page-sub">Pipeline, approved and funded deals</div></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-secondary">Filter</button>
+      <button class="btn btn-primary">+ New Deal</button>
+    </div>
+  </div>
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-label">Pipeline</div><div class="stat-value" id="dfPipe">—</div></div>
+    <div class="stat-card"><div class="stat-label">Approved</div><div class="stat-value" id="dfAppr">—</div></div>
+    <div class="stat-card"><div class="stat-label">Funded (YTD)</div><div class="stat-value" id="dfFund">—</div></div>
+    <div class="stat-card"><div class="stat-label">Total Facility</div><div class="stat-value" id="dfTotal">—</div></div>
+  </div>
+  <div id="dealFlowCards" style="display:flex;flex-direction:column;gap:14px"></div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     PORTFOLIO MONITORING
+════════════════════════════════════════════ -->
+<div id="page-portfolio" class="page">
+  <div class="page-head">
+    <div><div class="page-title">Portfolio Monitoring</div>
+         <div class="page-sub">Holdings, concentration and performance</div></div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="btn btn-secondary" onclick="document.getElementById('csvFile').click()">📁 Upload CSV</button>
+      <button class="btn btn-secondary" onclick="loadSampleData()">⚡ Load Sample</button>
+      <input type="file" id="csvFile" accept=".csv" onchange="handleCSVUpload(event)">
+    </div>
+  </div>
+  <div class="stats-grid five" id="portStats" style="display:none">
+    <div class="stat-card"><div class="stat-label">Positions</div><div class="stat-value" id="totalPositions">—</div></div>
+    <div class="stat-card"><div class="stat-label">Total Drawn</div><div class="stat-value" id="totalDrawn">—</div></div>
+    <div class="stat-card"><div class="stat-label">Avg Size</div><div class="stat-value" id="avgPosition">—</div></div>
+    <div class="stat-card"><div class="stat-label">Avg Lev. Yield</div><div class="stat-value" id="avgYield">—</div></div>
+    <div class="stat-card"><div class="stat-label">&gt;2% Conc.</div><div class="stat-value" id="overConc">—</div></div>
+  </div>
+  <div class="card" id="portTableCard">
+    <div class="card-head">
+      <div class="card-title">💼 Holdings</div>
+      <span style="font-size:11px;color:var(--muted)" id="portCount">Load data to begin</span>
+    </div>
+    <div class="tbl-wrap">
+      <table><thead><tr>
+        <th onclick="sortTable('obligor_name')">Obligor ↕</th>
+        <th onclick="sortTable('drawn')">Drawn ($M) ↕</th>
+        <th onclick="sortTable('position_pct')">Pos % ↕</th>
+        <th onclick="sortTable('coupon_rate')">Coupon ↕</th>
+        <th onclick="sortTable('levered_yield')">Lev. Yield ↕</th>
+        <th onclick="sortTable('advance_rate')">Adv. Rate ↕</th>
+        <th onclick="sortTable('asset_class')">Type</th>
+        <th onclick="sortTable('sector')">Sector</th>
+        <th onclick="sortTable('fair_value')">Fair Value ↕</th>
+      </tr></thead>
+      <tbody id="portTableBody"></tbody></table>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     GEOGRAPHIC VIEW (full-bleed iframe)
+════════════════════════════════════════════ -->
+<div id="page-geo" class="page-full">
+  <iframe id="map-iframe" src="portfolio_map.html"></iframe>
+</div>
+
+<!-- ════════════════════════════════════════════
+     CAPITAL ACCOUNTING
+════════════════════════════════════════════ -->
+<div id="page-capital" class="page">
+  <div class="page-head">
+    <div><div class="page-title">Capital Accounting</div>
+         <div class="page-sub">Capital calls, distributions and NAV by entity</div></div>
+    <button class="btn btn-secondary">⬇ Export</button>
+  </div>
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-label">Total Committed</div><div class="stat-value">$2,400M</div></div>
+    <div class="stat-card"><div class="stat-label">Total Called</div><div class="stat-value">$1,960M</div></div>
+    <div class="stat-card"><div class="stat-label">Distributions (YTD)</div><div class="stat-value">$214M</div></div>
+    <div class="stat-card"><div class="stat-label">Current NAV</div><div class="stat-value">$2,180M</div></div>
+  </div>
+  <div class="card">
+    <div class="card-head"><div class="card-title">💰 Capital Activity by Period</div></div>
+    <div class="tbl-wrap">
+      <table><thead><tr>
+        <th>Period</th><th>Entity</th><th>Capital Called ($M)</th>
+        <th>Distributions ($M)</th><th>Management Fees ($M)</th><th>NAV ($M)</th><th>DPI</th>
+      </tr></thead>
+      <tbody id="capitalTable"></tbody></table>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     DOCUMENTS
+════════════════════════════════════════════ -->
+<div id="page-documents" class="page">
+  <div class="page-head">
+    <div><div class="page-title">Documents</div>
+         <div class="page-sub">Fund documents, deal files and reporting</div></div>
+    <button class="btn btn-primary">⬆ Upload</button>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:4px">
+    <div class="stat-card"><div class="stat-label">Total Files</div><div class="stat-value">184</div></div>
+    <div class="stat-card"><div class="stat-label">Deal Docs</div><div class="stat-value">97</div></div>
+    <div class="stat-card"><div class="stat-label">Fund Docs</div><div class="stat-value">43</div></div>
+    <div class="stat-card"><div class="stat-label">Reporting</div><div class="stat-value">44</div></div>
+  </div>
+  <div class="card">
+    <div class="card-head">
+      <div class="card-title">📁 Recent Documents</div>
+      <input type="text" placeholder="Search documents…"
+             style="padding:5px 11px;border:1px solid var(--border);border-radius:6px;font-size:12px;width:200px">
+    </div>
+    <div class="card-body" id="docList"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     AI ANALYSIS
+════════════════════════════════════════════ -->
+<div id="page-ai" class="page">
+  <div class="page-head">
+    <div><div class="page-title">AI Analysis</div>
+         <div class="page-sub">Natural language portfolio intelligence powered by Claude</div></div>
+  </div>
+  <div class="card">
+    <div class="card-head"><div class="card-title">💬 Ask a question about your portfolio</div></div>
+    <div class="card-body">
+      <textarea id="queryInput"
+        placeholder="e.g. 'Show me positions above 2% concentration ranked by levered yield' — load portfolio data first"></textarea>
+      <div class="pills" id="suggestedQueries">
+        <span class="pill">Positions above 2% concentration ranked by levered yield</span>
+        <span class="pill">10 least efficient positions by advance rate</span>
+        <span class="pill">Model trimming all positions over 2% to 1.5%</span>
+        <span class="pill">NII impact of selling the bottom 10 positions</span>
+        <span class="pill">Estimate secondary market pricing for first lien positions</span>
+        <span class="pill">Sector concentration analysis vs. BDC benchmarks</span>
+      </div>
+      <button class="btn btn-primary" onclick="submitQuery()" style="width:100%;justify-content:center;padding:10px">
+        🚀 Analyze with Claude
+      </button>
+    </div>
+  </div>
+  <div id="resultContainer" class="hidden">
+    <div class="result-card" id="resultCard"></div>
+  </div>
+</div>
+
+</main><!-- /main -->
+</div><!-- /app-body -->
+
+<!-- Override Modal -->
+<div class="modal" id="overrideModal">
+  <div class="modal-box">
+    <div class="modal-title">Override Portfolio Value</div>
+    <div class="form-grp"><label>Position Name</label>
+      <input type="text" id="overridePosition" placeholder="e.g. Acme Corp"></div>
+    <div class="form-grp"><label>Field</label>
+      <select id="overrideField">
+        <option>drawn</option><option>fair_value</option>
+        <option>coupon_rate</option><option>levered_yield</option>
+      </select></div>
+    <div class="form-grp"><label>New Value</label>
+      <input type="text" id="overrideValue" placeholder="Enter new value"></div>
+    <div class="modal-actions">
+      <button class="btn btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="applyOverride()" style="flex:1">Apply Override</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  NAVIGATION
+// ═══════════════════════════════════════════════
+let currentPage = 'dashboard';
+let currentNavItem = document.querySelector('.nav-item.active');
+
+function nav(id, el) {
+  // Hide all pages
+  document.querySelectorAll('.page,.page-full').forEach(p => p.classList.remove('active'));
+  // Show target
+  const target = document.getElementById('page-'+id);
+  if(target) target.classList.add('active');
+  // Update nav highlight
+  document.querySelectorAll('.nav-item,.nav-child').forEach(n => n.classList.remove('active'));
+  if(el) el.classList.add('active');
+  currentPage = id;
+}
+
+function toggleGroup(id, el) {
+  const grp  = document.getElementById('grp-'+id);
+  const chev = document.getElementById('chev-'+id);
+  const open = grp.style.display !== 'none';
+  grp.style.display = open ? 'none' : 'block';
+  chev.classList.toggle('open', !open);
+}
+
+// ═══════════════════════════════════════════════
+//  API KEY
+// ═══════════════════════════════════════════════
+let apiKey = localStorage.getItem('anthropic_api_key') || '';
+document.getElementById('apiKeyInput').addEventListener('change', function(){
+  apiKey = this.value.trim();
+  if(apiKey){ localStorage.setItem('anthropic_api_key',apiKey); setAPI(true); }
+  else { localStorage.removeItem('anthropic_api_key'); setAPI(false); }
+});
+function setAPI(on){
+  const el = document.getElementById('apiStatus');
+  el.textContent = on ? 'Connected' : 'Not Connected';
+  el.classList.toggle('off', !on);
+}
+if(apiKey) setAPI(true);
+
+// ═══════════════════════════════════════════════
+//  SEEDED RNG (Mulberry32) — deterministic data
+// ═══════════════════════════════════════════════
+function mkRNG(seed){ let s=seed>>>0;
+  return ()=>{ s+=0x6D2B79F5; let t=Math.imul(s^(s>>>15),s|1);
+    t^=t+Math.imul(t^(t>>>7),t|61); return ((t^(t>>>14))>>>0)/4294967296; }; }
+const R = mkRNG(20240601);
+function rI(mn,mx){ return Math.floor(mn+R()*(mx-mn+1)); }
+function rF(mn,mx,dp=1){ return +(mn+R()*(mx-mn)).toFixed(dp); }
+function pick(arr){ return arr[Math.floor(R()*arr.length)]; }
+
+// ═══════════════════════════════════════════════
+//  DASHBOARD DATA
+// ═══════════════════════════════════════════════
+const ACTIVITIES = [
+  {icon:'📝',text:'Term sheet executed — Apex Digital Networks ($85M First Lien)',time:'2h ago',color:'#3b82f6'},
+  {icon:'✅',text:'IC approval granted — Rhine Industrial GmbH ($52M Unitranche)',time:'4h ago',color:'#10b981'},
+  {icon:'💰',text:'Capital call issued — Fund III LPs ($42M, 1.75% of committed)',time:'Yesterday',color:'#f59e0b'},
+  {icon:'📊',text:'Q3 portfolio report distributed to 24 LPs',time:'2 days ago',color:'#8b5cf6'},
+  {icon:'🔄',text:'Amendment executed — Summit Healthcare Partners (rate +50bps)',time:'3 days ago',color:'#f97316'},
+  {icon:'📁',text:'14 new diligence documents uploaded — NovaBridge Software',time:'4 days ago',color:'#6b7280'},
+];
+const feed = document.getElementById('activityFeed');
+ACTIVITIES.forEach(a => {
+  feed.innerHTML += `<div class="activity-item">
+    <div class="act-dot" style="background:${a.color}"></div>
+    <div><div class="act-text">${a.text}</div><div class="act-time">${a.time}</div></div>
+  </div>`;
+});
+
+const PIPELINE_STATUS = [
+  {s:'Pipeline',  n:11, v:842, cls:'b-warn'},
+  {s:'Approved',  n:4,  v:290, cls:'b-info'},
+  {s:'Funded',    n:32, v:1620,cls:'b-ok'},
+  {s:'Passed',    n:8,  v:380, cls:'b-err'},
+];
+const pSum = document.getElementById('pipelineSummary');
+PIPELINE_STATUS.forEach(r => {
+  pSum.innerHTML += `<tr>
+    <td style="padding:8px 0;border-bottom:1px solid var(--border)">
+      <span class="badge ${r.cls}">${r.s}</span></td>
+    <td style="text-align:right;padding:8px 0;border-bottom:1px solid var(--border);font-weight:600">${r.n}</td>
+    <td style="text-align:right;padding:8px 0;border-bottom:1px solid var(--border);font-weight:600">$${r.v}M</td>
+  </tr>`;
+});
+
+const AC_MIX = [
+  {n:'First Lien',  pct:52, color:'#1e40af'},
+  {n:'Unitranche',  pct:21, color:'#5b21b6'},
+  {n:'Second Lien', pct:14, color:'#be185d'},
+  {n:'Mezz',        pct:8,  color:'#92400e'},
+  {n:'Equity Co-Inv',pct:5, color:'#065f46'},
+];
+const acMix = document.getElementById('acMix');
+AC_MIX.forEach(a => {
+  acMix.innerHTML += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;font-size:12px">
+    <div style="width:80px;color:var(--muted)">${a.n}</div>
+    <div style="flex:1;height:10px;background:#f3f4f6;border-radius:4px;overflow:hidden">
+      <div style="height:100%;width:${a.pct}%;background:${a.color};border-radius:4px;opacity:.8"></div></div>
+    <div style="width:30px;text-align:right;font-weight:600">${a.pct}%</div>
+  </div>`;
+});
+
+// ═══════════════════════════════════════════════
+//  MY QUEUE
+// ═══════════════════════════════════════════════
+const QUEUE = [
+  {title:'IC memo review — NovaBridge Software',sub:'$75M Second Lien · Due by IC Thursday',due:'Thu Apr 25',pri:'#ef4444',type:'Review'},
+  {title:'Sign closing docs — Tokyo Digital Systems',sub:'$124M First Lien · Requires wet signature',due:'Wed Apr 24',pri:'#ef4444',type:'Action'},
+  {title:'Capital call notice — Fund III Tranche 6',sub:'Draft for CFO review before LP distribution',due:'Fri Apr 26',pri:'#f59e0b',type:'Draft'},
+  {title:'Q3 LP report — Sovereign Wealth Partners',sub:'Custom reporting format requested',due:'May 1',pri:'#f59e0b',type:'Report'},
+  {title:'Annual review — Harvest Consumer Brands',sub:'Covenant compliance and performance metrics',due:'May 5',pri:'#6b7280',type:'Review'},
+  {title:'Update contact info — Nordic Pension Fund',sub:'New IR contact following staff change',due:'May 8',pri:'#6b7280',type:'Admin'},
+];
+const ql = document.getElementById('queueList');
+QUEUE.forEach(q => {
+  ql.innerHTML += `<div class="queue-item">
+    <div class="q-priority" style="background:${q.pri}"></div>
+    <div class="q-text"><div class="q-title">${q.title}</div>
+      <div class="q-sub">${q.sub}</div></div>
+    <div><div class="q-due">Due ${q.due}</div>
+      <div style="text-align:right;margin-top:4px"><span class="badge b-neu">${q.type}</span></div></div>
+  </div>`;
+});
+
+// ═══════════════════════════════════════════════
+//  SECURITY MASTER — ASSET CLASSES
+// ═══════════════════════════════════════════════
+const ASSET_CLASSES = [
+  {n:'First Lien Senior Secured', strat:'Direct Lending', sen:'Senior Secured', pos:23, exp:980, yld:9.4},
+  {n:'Unitranche',                strat:'Direct Lending', sen:'Senior Secured', pos:10, exp:420, yld:10.1},
+  {n:'Second Lien',               strat:'Direct Lending', sen:'Junior Secured',  pos:7,  exp:295, yld:12.2},
+  {n:'Mezzanine',                 strat:'Credit Opps',    sen:'Subordinated',    pos:4,  exp:165, yld:13.1},
+  {n:'Equity Co-Investment',      strat:'Credit Opps',    sen:'Equity',          pos:3,  exp:100, yld:14.8},
+];
+const actbl = document.getElementById('assetClassTable');
+ASSET_CLASSES.forEach(a => {
+  actbl.innerHTML += `<tr>
+    <td style="font-weight:600">${a.n}</td>
+    <td><span class="badge b-info">${a.strat}</span></td>
+    <td>${a.sen}</td>
+    <td>${a.pos}</td>
+    <td>$${a.exp}M</td>
+    <td style="font-weight:600;color:var(--success)">${a.yld}%</td>
+  </tr>`;
+});
+
+// ═══════════════════════════════════════════════
+//  FUNDS
+// ═══════════════════════════════════════════════
+const FUNDS = [
+  {n:'Stonecrest Capital Fund I',   v:2016, strat:'Direct Lending', aum:600,  dep:585, stat:'Harvesting'},
+  {n:'Stonecrest Capital Fund II',  v:2019, strat:'Direct Lending', aum:1200, dep:1105,stat:'Fully Deployed'},
+  {n:'Stonecrest Capital Fund III', v:2022, strat:'Direct Lending', aum:2400, dep:1960,stat:'Deploying'},
+  {n:'Stonecrest Opps Fund I',      v:2021, strat:'Credit Opps',    aum:400,  dep:310, stat:'Deploying'},
+];
+const ftbl = document.getElementById('fundsTable');
+FUNDS.forEach(f => {
+  const util = (f.dep/f.aum*100).toFixed(0);
+  const cls = f.stat==='Deploying'?'b-ok':f.stat==='Harvesting'?'b-warn':'b-info';
+  ftbl.innerHTML += `<tr>
+    <td style="font-weight:600">${f.n}</td>
+    <td>${f.v}</td>
+    <td>${f.strat}</td>
+    <td>$${f.aum.toLocaleString()}M</td>
+    <td>$${f.dep.toLocaleString()}M</td>
+    <td>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="flex:1;height:6px;background:#f3f4f6;border-radius:3px;min-width:60px">
+          <div style="height:100%;width:${util}%;background:var(--blue);border-radius:3px"></div></div>
+        <span style="font-size:11px;font-weight:600">${util}%</span>
+      </div>
+    </td>
+    <td><span class="badge ${cls}">${f.stat}</span></td>
+  </tr>`;
+});
+
+// ═══════════════════════════════════════════════
+//  INVESTMENT VEHICLES
+// ═══════════════════════════════════════════════
+const VEHICLES = [
+  {n:'Stonecrest CLO 2022-1',      type:'CLO',  fund:'Fund III', comm:400, dep:385, stat:'Active'},
+  {n:'SC Direct Lending SMA I',    type:'SMA',  fund:'Fund III', comm:250, dep:210, stat:'Active'},
+  {n:'Stonecrest SPV Holdings LLC',type:'SPV',  fund:'Fund III', comm:150, dep:140, stat:'Active'},
+  {n:'SC Co-Invest Vehicle I',     type:'Co-Inv',fund:'Fund III',comm:80,  dep:65,  stat:'Active'},
+  {n:'Stonecrest CLO 2019-1',      type:'CLO',  fund:'Fund II',  comm:350, dep:350, stat:'Reinvesting'},
+  {n:'SC European SMA',            type:'SMA',  fund:'Fund III', comm:180, dep:120, stat:'Deploying'},
+];
+const vtbl = document.getElementById('vehiclesTable');
+VEHICLES.forEach(v => {
+  const cls = v.stat==='Active'?'b-ok':v.stat==='Deploying'?'b-warn':'b-info';
+  vtbl.innerHTML += `<tr>
+    <td style="font-weight:600">${v.n}</td>
+    <td><span class="badge b-neu">${v.type}</span></td>
+    <td>${v.fund}</td>
+    <td>$${v.comm}M</td>
+    <td>$${v.dep}M</td>
+    <td><span class="badge ${cls}">${v.stat}</span></td>
+  </tr>`;
+});
+
+// ═══════════════════════════════════════════════
+//  LIMITED PARTNERS
+// ═══════════════════════════════════════════════
+const LP_TYPES = ['Pension Fund','Sovereign Wealth','Endowment','Insurance','Family Office','Fund of Funds'];
+const LP_DATA = [
+  {n:'Nordic Pension Alliance',    type:'Pension Fund',    comm:280, called:228, dist:18},
+  {n:'Gulf Sovereign Partners',    type:'Sovereign Wealth',comm:350, called:285, dist:24},
+  {n:'Hartwell University Endow.', type:'Endowment',       comm:120, called:98,  dist:8},
+  {n:'Pacific Life Insurance Co.', type:'Insurance',       comm:200, called:163, dist:14},
+  {n:'Meridian Family Office',     type:'Family Office',   comm:75,  called:61,  dist:5},
+  {n:'Bridgewater FoF Partners',   type:'Fund of Funds',   comm:180, called:147, dist:12},
+  {n:'Ontario Teachers\' Pension', type:'Pension Fund',    comm:310, called:253, dist:21},
+  {n:'Qatar Investment Authority', type:'Sovereign Wealth',comm:400, called:326, dist:28},
+  {n:'Cambridge Endowment Mgmt',   type:'Endowment',       comm:90,  called:73,  dist:6},
+  {n:'Munich Re Investments',      type:'Insurance',       comm:150, called:122, dist:10},
+];
+const lptbl = document.getElementById('lpTable');
+let totalComm=0, totalCalled=0;
+LP_DATA.forEach(lp => {
+  totalComm += lp.comm; totalCalled += lp.called;
+  const pct = (lp.called/lp.comm*100).toFixed(0);
+  lptbl.innerHTML += `<tr>
+    <td><div style="display:flex;align-items:center;gap:10px">
+      <div class="lp-avatar">${lp.n.charAt(0)}</div>
+      <span style="font-weight:600">${lp.n}</span></div></td>
+    <td>${lp.type}</td>
+    <td>$${lp.comm}M</td>
+    <td>$${lp.called}M</td>
+    <td><div style="display:flex;align-items:center;gap:6px">
+      <div style="width:50px;height:5px;background:#f3f4f6;border-radius:3px">
+        <div style="height:100%;width:${pct}%;background:var(--blue);border-radius:3px"></div></div>
+      <span style="font-size:12px;font-weight:600">${pct}%</span></div></td>
+    <td>$${lp.dist}M</td>
+    <td><span class="badge b-ok">Active</span></td>
+  </tr>`;
+});
+document.getElementById('lpCount').textContent = LP_DATA.length;
+document.getElementById('lpCommitted').textContent = '$'+totalComm.toLocaleString()+'M';
+document.getElementById('lpAvg').textContent = '$'+(totalComm/LP_DATA.length).toFixed(0)+'M';
+
+// ═══════════════════════════════════════════════
+//  CONTACTS
+// ═══════════════════════════════════════════════
+const CONTACTS = [
+  {n:'Lars Andersen',    org:'Nordic Pension Alliance',    role:'CIO',               type:'LP',          email:'l.andersen@npa.dk',      last:'Apr 18'},
+  {n:'Fatima Al-Rashid', org:'Gulf Sovereign Partners',   role:'Portfolio Manager', type:'LP',          email:'f.alrashid@gsp.ae',      last:'Apr 20'},
+  {n:'James Worthington',org:'Hartwell Univ. Endowment',  role:'Director PE/Credit',type:'LP',          email:'j.worthington@hartwell.edu',last:'Apr 12'},
+  {n:'Sarah Chen',       org:'Pacific Life Insurance',    role:'Fixed Income Head', type:'LP',          email:'s.chen@pacificlife.com',  last:'Apr 15'},
+  {n:'Mark Reynolds',    org:'Apex Digital Networks',     role:'CFO',               type:'Borrower',    email:'m.reynolds@apexdigital.io',last:'Apr 22'},
+  {n:'Claudia Müller',   org:'Rhein Industrial GmbH',     role:'CEO',               type:'Borrower',    email:'c.muller@rheinindustrial.de',last:'Apr 19'},
+  {n:'David Park',       org:'Goldman Sachs BDC Desk',    role:'MD',                type:'Counterparty',email:'d.park@gs.com',           last:'Apr 10'},
+  {n:'Emily Watson',     org:'Dechert LLP',               role:'Partner',           type:'Advisor',     email:'e.watson@dechert.com',    last:'Apr 8'},
+];
+const ctbl = document.getElementById('contactsTable');
+CONTACTS.forEach(c => {
+  const cls = c.type==='LP'?'b-info':c.type==='Borrower'?'b-ok':c.type==='Advisor'?'b-warn':'b-neu';
+  ctbl.innerHTML += `<tr>
+    <td><div style="display:flex;align-items:center;gap:8px">
+      <div class="lp-avatar" style="width:28px;height:28px;font-size:11px">${c.n.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>
+      <span style="font-weight:600">${c.n}</span></div></td>
+    <td style="color:var(--muted)">${c.org}</td>
+    <td>${c.role}</td>
+    <td><span class="badge ${cls}">${c.type}</span></td>
+    <td style="font-size:12px;color:var(--muted)">${c.email}</td>
+    <td style="color:var(--muted)">${c.last}</td>
+  </tr>`;
+});
+
+// ═══════════════════════════════════════════════
+//  ORDER MANAGEMENT
+// ═══════════════════════════════════════════════
+const OMS_DATA = [
+  {id:'ORD-2024-089',obl:'Tokyo Digital Systems',   inst:'First Lien',  dir:'Buy',  amt:124, px:99.75, date:'Apr 22',stat:'Settled',   cls:'b-ok'},
+  {id:'ORD-2024-090',obl:'Rhine Industrial GmbH',   inst:'Unitranche',  dir:'Buy',  amt:52,  px:100.00,date:'Apr 22',stat:'Pending',   cls:'b-warn'},
+  {id:'ORD-2024-091',obl:'Harvest Consumer Brands', inst:'First Lien',  dir:'Buy',  amt:38,  px:99.50, date:'Apr 21',stat:'Settled',   cls:'b-ok'},
+  {id:'ORD-2024-092',obl:'NovaBridge Software',     inst:'Second Lien', dir:'Sell', amt:15,  px:94.25, date:'Apr 20',stat:'Failed',    cls:'b-err'},
+  {id:'ORD-2024-093',obl:'Apex Digital Networks',   inst:'First Lien',  dir:'Buy',  amt:85,  px:100.00,date:'Apr 19',stat:'Pending',   cls:'b-warn'},
+  {id:'ORD-2024-094',obl:'CoreLogic Solutions',     inst:'Unitranche',  dir:'Buy',  amt:60,  px:100.00,date:'Apr 18',stat:'Settled',   cls:'b-ok'},
+  {id:'ORD-2024-085',obl:'Summit Healthcare Ptnrs', inst:'Unitranche',  dir:'Buy',  amt:45,  px:100.00,date:'Apr 15',stat:'Settled',   cls:'b-ok'},
+  {id:'ORD-2024-084',obl:'BlueStar Energy Holdings',inst:'First Lien',  dir:'Buy',  amt:72,  px:99.25, date:'Apr 14',stat:'Settled',   cls:'b-ok'},
+];
+const omstbl = document.getElementById('omsTable');
+OMS_DATA.forEach(o => {
+  omstbl.innerHTML += `<tr>
+    <td style="font-family:monospace;font-size:12px;color:var(--muted)">${o.id}</td>
+    <td style="font-weight:600">${o.obl}</td>
+    <td>${o.inst}</td>
+    <td><span style="color:${o.dir==='Buy'?'var(--success)':'var(--danger)'};font-weight:600">${o.dir}</span></td>
+    <td style="font-weight:600">$${o.amt}M</td>
+    <td>${o.px}</td>
+    <td style="color:var(--muted)">${o.date}</td>
+    <td><span class="badge ${o.cls}">${o.stat}</span></td>
+  </tr>`;
+});
+
+// ═══════════════════════════════════════════════
+//  DEAL FLOW
+// ═══════════════════════════════════════════════
+const DEALS_DF = [
+  {n:'NovaBridge Software',       borrower:'NovaBridge Software Inc.',   inst:'Second Lien',  size:75,  team:'A. Williams', stat:'pipeline', desc:'B2B SaaS platform for enterprise workflow automation. EBITDA $18M, leverage 4.8x.'},
+  {n:'Rhine Industrial GmbH',     borrower:'Rhine Industrial GmbH & Co.',inst:'Unitranche',   size:52,  team:'S. Müller',   stat:'approved', desc:'German precision engineering company. Strong export revenues, €12M EBITDA.'},
+  {n:'Apex Digital Networks',     borrower:'Apex Digital Networks Ltd.',  inst:'First Lien',   size:85,  team:'J. Li',       stat:'approved', desc:'Fiber network operator, 6-year contracted revenue, $22M EBITDA.'},
+  {n:'Coastal Pharma Holdings',   borrower:'Coastal Pharma Holdings LLC.',inst:'Unitranche',  size:68,  team:'M. Taylor',   stat:'pipeline', desc:'Specialty pharma distributor, 3 FDA-approved products, $15M EBITDA.'},
+  {n:'Meridian Consumer Brands',  borrower:'Meridian Consumer Brands Co.',inst:'First Lien',  size:95,  team:'K. Osei',     stat:'funded',   desc:'Multi-brand consumer products, strong DTC channel, $28M EBITDA.'},
+  {n:'Nordic Clean Energy',       borrower:'Nordic Clean Energy AS',      inst:'First Lien',   size:110, team:'E. Larsen',   stat:'funded',   desc:'Wind and solar portfolio, 12-year PPA contracts, $31M EBITDA.'},
+];
+let dfPipe=0,dfAppr=0,dfFund=0,dfTotal=0;
+const STAT_MAP = {pipeline:{lbl:'Pipeline',cls:'b-warn'},approved:{lbl:'Approved',cls:'b-info'},funded:{lbl:'Funded',cls:'b-ok'}};
+const AC_BADGE_MAP = {'First Lien':'b-fl','Second Lien':'b-sl','Mezz':'b-mz','Equity Co-Inv':'b-eq','Unitranche':'b-ut'};
+DEALS_DF.forEach(d => {
+  if(d.stat==='pipeline') dfPipe++;
+  if(d.stat==='approved') dfAppr++;
+  if(d.stat==='funded')   dfFund++;
+  dfTotal += d.size;
+  const sm = STAT_MAP[d.stat];
+  document.getElementById('dealFlowCards').innerHTML += `
+  <div class="deal-card">
+    <div class="deal-head">
+      <div><div class="deal-name">${d.n}</div><div class="deal-borrower">${d.borrower}</div></div>
+      <span class="badge ${sm.cls}">${sm.lbl}</span>
+    </div>
+    <div class="deal-metrics">
+      <div class="deal-metric"><div class="dm-label">Instrument</div>
+        <div class="dm-value"><span class="badge ${AC_BADGE_MAP[d.inst]||'b-fl'}">${d.inst}</span></div></div>
+      <div class="deal-metric"><div class="dm-label">Facility Size</div>
+        <div class="dm-value">$${d.size}M</div></div>
+      <div class="deal-metric"><div class="dm-label">Deal Team Lead</div>
+        <div class="dm-value">${d.team}</div></div>
+      <div class="deal-metric"><div class="dm-label">Stage</div>
+        <div class="dm-value">${sm.lbl}</div></div>
+    </div>
+    <div style="font-size:12px;color:var(--muted)">${d.desc}</div>
+  </div>`;
+});
+document.getElementById('dfPipe').textContent  = dfPipe;
+document.getElementById('dfAppr').textContent  = dfAppr;
+document.getElementById('dfFund').textContent  = dfFund;
+document.getElementById('dfTotal').textContent = '$'+dfTotal+'M';
+
+// ═══════════════════════════════════════════════
+//  PORTFOLIO MONITORING
+// ═══════════════════════════════════════════════
+let portfolioData=[], currentAnalysis=null, sortDir={};
+
+const samplePortfolio = [
+  {obligor_name:"Acme Digital Services",   commitment:50,drawn:45,undrawn:5, coupon_rate:8.5, pik_rate:2.0,advance_rate:72,cost_of_leverage:4.2,fair_value:44, asset_class:"First Lien",  sector:"Business Services"},
+  {obligor_name:"CloudTech Ventures",      commitment:35,drawn:28,undrawn:7, coupon_rate:9.2, pik_rate:1.5,advance_rate:68,cost_of_leverage:4.5,fair_value:27, asset_class:"First Lien",  sector:"Technology"},
+  {obligor_name:"MediCare Solutions",      commitment:40,drawn:40,undrawn:0, coupon_rate:7.8, pik_rate:2.5,advance_rate:75,cost_of_leverage:3.8,fair_value:41, asset_class:"First Lien",  sector:"Healthcare"},
+  {obligor_name:"BuildRight Construction", commitment:30,drawn:30,undrawn:0, coupon_rate:10.5,pik_rate:0.5,advance_rate:65,cost_of_leverage:5.0,fair_value:29, asset_class:"Second Lien", sector:"Business Services"},
+  {obligor_name:"DataFlow Analytics",      commitment:55,drawn:50,undrawn:5, coupon_rate:8.0, pik_rate:2.0,advance_rate:70,cost_of_leverage:4.1,fair_value:49, asset_class:"First Lien",  sector:"Technology"},
+  {obligor_name:"Retail Brands Holdings",  commitment:28,drawn:25,undrawn:3, coupon_rate:9.8, pik_rate:1.0,advance_rate:62,cost_of_leverage:4.8,fair_value:24, asset_class:"Second Lien", sector:"Consumer"},
+  {obligor_name:"LogistiCorp Global",      commitment:45,drawn:42,undrawn:3, coupon_rate:8.3, pik_rate:1.8,advance_rate:71,cost_of_leverage:4.3,fair_value:41, asset_class:"First Lien",  sector:"Business Services"},
+  {obligor_name:"SafeGuard Insurance",     commitment:38,drawn:35,undrawn:3, coupon_rate:7.5, pik_rate:2.2,advance_rate:76,cost_of_leverage:3.9,fair_value:35, asset_class:"First Lien",  sector:"Financial Services"},
+  {obligor_name:"EnergyPlus Holdings",     commitment:32,drawn:30,undrawn:2, coupon_rate:9.0, pik_rate:1.5,advance_rate:68,cost_of_leverage:4.4,fair_value:29, asset_class:"Mezz",        sector:"Energy"},
+  {obligor_name:"ManufacturePro Systems",  commitment:36,drawn:33,undrawn:3, coupon_rate:8.7, pik_rate:1.2,advance_rate:69,cost_of_leverage:4.2,fair_value:32, asset_class:"First Lien",  sector:"Industrial"},
+  {obligor_name:"ProHealth Medical Group", commitment:29,drawn:26,undrawn:3, coupon_rate:7.9, pik_rate:2.1,advance_rate:74,cost_of_leverage:4.0,fair_value:26, asset_class:"First Lien",  sector:"Healthcare"},
+  {obligor_name:"FoodService Brands",      commitment:25,drawn:22,undrawn:3, coupon_rate:10.2,pik_rate:0.8,advance_rate:61,cost_of_leverage:5.1,fair_value:21, asset_class:"Second Lien", sector:"Consumer"},
+  {obligor_name:"TechStacks Inc",          commitment:44,drawn:40,undrawn:4, coupon_rate:8.6, pik_rate:1.4,advance_rate:67,cost_of_leverage:4.5,fair_value:39, asset_class:"First Lien",  sector:"Technology"},
+  {obligor_name:"PropertyManage Solutions",commitment:27,drawn:24,undrawn:3, coupon_rate:8.1, pik_rate:2.0,advance_rate:73,cost_of_leverage:4.1,fair_value:24, asset_class:"First Lien",  sector:"Real Estate"},
+  {obligor_name:"EducaTech Platform",      commitment:31,drawn:28,undrawn:3, coupon_rate:9.5, pik_rate:1.2,advance_rate:63,cost_of_leverage:4.9,fair_value:27, asset_class:"Equity Co-Inv",sector:"Technology"},
+  {obligor_name:"AutoServices Holdings",   commitment:33,drawn:30,undrawn:3, coupon_rate:8.9, pik_rate:1.3,advance_rate:66,cost_of_leverage:4.6,fair_value:29, asset_class:"Second Lien", sector:"Automotive"},
+  {obligor_name:"CleanEnergy Corp",        commitment:42,drawn:38,undrawn:4, coupon_rate:8.4, pik_rate:1.9,advance_rate:70,cost_of_leverage:4.2,fair_value:37, asset_class:"First Lien",  sector:"Energy"},
+  {obligor_name:"MarketPlace Digital",     commitment:39,drawn:35,undrawn:4, coupon_rate:9.1, pik_rate:1.1,advance_rate:64,cost_of_leverage:4.7,fair_value:34, asset_class:"Mezz",        sector:"Technology"},
+  {obligor_name:"GreenLand Properties",    commitment:26,drawn:23,undrawn:3, coupon_rate:8.2, pik_rate:2.3,advance_rate:72,cost_of_leverage:4.0,fair_value:23, asset_class:"First Lien",  sector:"Real Estate"},
+  {obligor_name:"SpecialtyMFG Company",    commitment:34,drawn:31,undrawn:3, coupon_rate:9.3, pik_rate:1.0,advance_rate:62,cost_of_leverage:4.9,fair_value:30, asset_class:"Second Lien", sector:"Industrial"},
+];
+
+function calcPort(data){
+  const t = data.reduce((s,p)=>s+p.drawn,0);
+  return data.map(p=>({...p,
+    position_pct:((p.drawn/t)*100).toFixed(2),
+    levered_yield:(p.coupon_rate+p.pik_rate-(p.cost_of_leverage*(p.advance_rate/100))).toFixed(2)
+  }));
+}
+function loadSampleData(){ portfolioData=calcPort(samplePortfolio); renderPort(); }
+function handleCSVUpload(e){
+  const r=new FileReader(); r.onload=ev=>{
+    const lines=ev.target.result.trim().split('\n');
+    const hdrs=lines[0].split(',').map(h=>h.trim());
+    const data=lines.slice(1).map(l=>{const v=l.split(',').map(x=>x.trim());const o={};
+      hdrs.forEach((h,i)=>{o[h]=isNaN(v[i])?v[i]:parseFloat(v[i]);}); return o;});
+    portfolioData=calcPort(data); renderPort();
+  }; r.readAsText(e.target.files[0]);
+}
+function renderPort(){
+  if(!portfolioData.length) return;
+  const total=portfolioData.reduce((s,p)=>s+p.drawn,0);
+  const avgY=(portfolioData.reduce((s,p)=>s+parseFloat(p.levered_yield),0)/portfolioData.length).toFixed(2);
+  const overC=portfolioData.filter(p=>parseFloat(p.position_pct)>2).length;
+  document.getElementById('portStats').style.display='grid';
+  document.getElementById('totalPositions').textContent=portfolioData.length;
+  document.getElementById('totalDrawn').textContent='$'+total.toFixed(1)+'M';
+  document.getElementById('avgPosition').textContent='$'+(total/portfolioData.length).toFixed(1)+'M';
+  document.getElementById('avgYield').textContent=avgY+'%';
+  document.getElementById('overConc').textContent=overC;
+  document.getElementById('portCount').textContent=portfolioData.length+' positions';
+  renderPortTable(portfolioData);
+}
+function renderPortTable(data){
+  const tb=document.getElementById('portTableBody'); tb.innerHTML='';
+  data.forEach(p=>{
+    const row=tb.insertRow();
+    const pp=parseFloat(p.position_pct), ar=parseFloat(p.advance_rate);
+    row.insertCell(0).textContent=p.obligor_name;
+    row.insertCell(1).textContent=parseFloat(p.drawn).toFixed(1);
+    const pc=row.insertCell(2); pc.textContent=p.position_pct+'%';
+    if(pp>2) pc.classList.add('hi-red');
+    row.insertCell(3).textContent=parseFloat(p.coupon_rate).toFixed(2)+'%';
+    row.insertCell(4).textContent=p.levered_yield+'%';
+    const ac=row.insertCell(5); ac.textContent=parseFloat(p.advance_rate).toFixed(0)+'%';
+    if(ar<65) ac.classList.add('hi-amber');
+    const tc=row.insertCell(6);
+    tc.innerHTML=`<span class="badge ${AC_BADGE_MAP[p.asset_class]||'b-fl'}">${p.asset_class}</span>`;
+    row.insertCell(7).textContent=p.sector;
+    row.insertCell(8).textContent=parseFloat(p.fair_value).toFixed(1);
+  });
+}
+const COL_IDX={obligor_name:0,drawn:1,position_pct:2,coupon_rate:3,levered_yield:4,advance_rate:5,asset_class:6,sector:7,fair_value:8};
+function sortTable(col){
+  sortDir[col]=!sortDir[col];
+  const s=[...portfolioData].sort((a,b)=>{
+    const av=a[col],bv=b[col],an=parseFloat(av),bn=parseFloat(bv);
+    return sortDir[col]?(isNaN(an)?String(av).localeCompare(String(bv)):an-bn)
+                       :(isNaN(an)?String(bv).localeCompare(String(av)):bn-an);
+  });
+  renderPortTable(s);
+}
+
+// ═══════════════════════════════════════════════
+//  CAPITAL ACCOUNTING
+// ═══════════════════════════════════════════════
+const CAP_DATA = [
+  {per:'Q3 2024',ent:'Fund III',called:42.0,dist:18.5,fees:3.2,nav:2180,dpi:0.14},
+  {per:'Q2 2024',ent:'Fund III',called:65.0,dist:12.0,fees:3.2,nav:2142,dpi:0.11},
+  {per:'Q1 2024',ent:'Fund III',called:88.0,dist:8.0, fees:3.2,nav:2092,dpi:0.08},
+  {per:'Q4 2023',ent:'Fund III',called:110.0,dist:0.0,fees:3.2,nav:2010,dpi:0.00},
+  {per:'Q3 2023',ent:'Fund III',called:145.0,dist:0.0,fees:3.2,nav:1900,dpi:0.00},
+  {per:'Q2 2023',ent:'Fund II', called:0.0,  dist:42.0,fees:2.4,nav:1105,dpi:0.85},
+];
+const ctbl2=document.getElementById('capitalTable');
+CAP_DATA.forEach(c=>{
+  ctbl2.innerHTML += `<tr>
+    <td style="font-weight:500">${c.per}</td>
+    <td>${c.ent}</td>
+    <td style="font-weight:600;color:${c.called>0?'var(--blue)':'var(--muted)'}">
+      ${c.called>0?'$'+c.called.toFixed(1)+'M':'—'}</td>
+    <td style="font-weight:600;color:${c.dist>0?'var(--success)':'var(--muted)'}">
+      ${c.dist>0?'$'+c.dist.toFixed(1)+'M':'—'}</td>
+    <td>$${c.fees.toFixed(1)}M</td>
+    <td style="font-weight:600">$${c.nav.toLocaleString()}M</td>
+    <td style="font-weight:600">${c.dpi.toFixed(2)}x</td>
+  </tr>`;
+});
+
+// ═══════════════════════════════════════════════
+//  DOCUMENTS
+// ═══════════════════════════════════════════════
+const DOCS = [
+  {icon:'📄',n:'NovaBridge Software — IC Memorandum v3',     type:'IC Memo',  rel:'NovaBridge Software',    date:'Apr 22, 2024',size:'2.4 MB'},
+  {icon:'📋',n:'Stonecrest Fund III — Q3 2024 LP Report',    type:'Reporting',rel:'Fund III',                date:'Apr 20, 2024',size:'5.1 MB'},
+  {icon:'⚖️', n:'Rhine Industrial — Credit Agreement Final',  type:'Legal',    rel:'Rhine Industrial GmbH',  date:'Apr 18, 2024',size:'1.8 MB'},
+  {icon:'📊',n:'Apex Digital — Financial Model Q3',          type:'Diligence',rel:'Apex Digital Networks',   date:'Apr 16, 2024',size:'3.2 MB'},
+  {icon:'📄',n:'Coastal Pharma — CIM',                       type:'Diligence',rel:'Coastal Pharma Holdings', date:'Apr 14, 2024',size:'8.7 MB'},
+  {icon:'📋',n:'Fund III — Capital Call Notice #6',          type:'Ops',      rel:'Fund III',                date:'Apr 12, 2024',size:'0.4 MB'},
+  {icon:'📊',n:'Portfolio Monitoring Report — Apr 2024',     type:'Reporting',rel:'Fund III',                date:'Apr 10, 2024',size:'1.1 MB'},
+  {icon:'⚖️', n:'MediCare Solutions — Amendment No. 2',       type:'Legal',    rel:'MediCare Solutions',      date:'Apr 5, 2024', size:'0.9 MB'},
+];
+const dl=document.getElementById('docList');
+DOCS.forEach(d=>{
+  const cls=d.type==='Legal'?'b-warn':d.type==='Reporting'?'b-info':d.type==='IC Memo'?'b-err':'b-neu';
+  dl.innerHTML+=`<div class="doc-row">
+    <div class="doc-icon">${d.icon}</div>
+    <div style="flex:1">
+      <div class="doc-name">${d.n}</div>
+      <div class="doc-meta">${d.rel} · ${d.date} · ${d.size}</div>
+    </div>
+    <span class="badge ${cls}">${d.type}</span>
+    <button class="btn btn-secondary" style="margin-left:8px;font-size:11px;padding:4px 10px">⬇</button>
+  </div>`;
+});
+
+// ═══════════════════════════════════════════════
+//  AI ANALYSIS
+// ═══════════════════════════════════════════════
+document.querySelectorAll('.pill').forEach(p=>{
+  p.onclick=()=>{ document.getElementById('queryInput').value=p.textContent.trim(); };
+});
+
+async function submitQuery(){
+  const q=document.getElementById('queryInput').value.trim();
+  if(!q){ alert('Please enter a question.'); return; }
+  if(!apiKey){ alert('Enter your Anthropic API key in the top-right corner.'); return; }
+  if(!portfolioData.length){ alert('Load portfolio data first — go to Portfolio Monitoring and click "Load Sample".'); return; }
+  const rc=document.getElementById('resultContainer');
+  const rd=document.getElementById('resultCard');
+  rc.classList.remove('hidden');
+  rd.innerHTML='<div style="display:flex;align-items:center;gap:10px;color:var(--muted)"><div class="spinner"></div> Analyzing portfolio…</div>';
+  try {
+    const total=portfolioData.reduce((s,p)=>s+p.drawn,0);
+    const sys=`You are an expert private credit portfolio analyst for a BDC/direct lending fund. Portfolio JSON:\n\`\`\`json\n${JSON.stringify(portfolioData,null,2)}\n\`\`\`\nAlways: cite exact numbers, show reasoning step-by-step, rate confidence HIGH/MEDIUM/LOW, show before/after for scenarios. Portfolio: $${total.toFixed(0)}M drawn, ${portfolioData.length} positions. User is a CFO preparing IC analysis.`;
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
+      headers:{'x-api-key':apiKey,'anthropic-version':'2023-06-01','content-type':'application/json','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:2048,system:sys,messages:[{role:'user',content:q}]})});
+    if(!res.ok){const e=await res.json();throw new Error(e.error?.message||'API Error');}
+    const data=await res.json();
+    const text=data.content[0].text;
+    currentAnalysis={q,text,ts:new Date().toLocaleString(),total};
+    let conf='MEDIUM';
+    if(/directly from|exact data/i.test(text)) conf='HIGH';
+    else if(/estimat|approximat/i.test(text)) conf='LOW';
+    const cls={HIGH:'conf-high',MEDIUM:'conf-med',LOW:'conf-low'}[conf];
+    rd.innerHTML=`
+      <span class="conf-badge ${cls}">Confidence: ${conf}</span>
+      <div class="result-text">${text.replace(/\n/g,'<br>')}</div>
+      <div class="expand-hd" onclick="this.classList.toggle('open');this.nextElementSibling.classList.toggle('show')">
+        <span class="chevron">▼</span> Reasoning & Methodology
+      </div>
+      <div class="expand-body">
+        <b>Query:</b> ${q}<br><br>
+        <b>Portfolio:</b> ${portfolioData.length} positions · $${total.toFixed(1)}M drawn<br>
+        <b>Analysis Date:</b> ${currentAnalysis.ts}
+      </div>
+      <div class="result-actions">
+        <button class="btn btn-secondary" onclick="openModal()">✏️ Override a Value</button>
+        <button class="btn btn-success" onclick="exportAI()">💾 Export</button>
+      </div>`;
+  } catch(err){
+    rd.innerHTML=`<div style="background:rgba(239,68,68,.1);color:#991b1b;padding:10px 14px;border-radius:6px;border-left:3px solid var(--danger)">Error: ${err.message}</div>`;
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  OVERRIDE MODAL
+// ═══════════════════════════════════════════════
+function openModal(){ document.getElementById('overrideModal').classList.add('show'); }
+function closeModal(){ document.getElementById('overrideModal').classList.remove('show'); }
+function applyOverride(){
+  const name=document.getElementById('overridePosition').value.trim();
+  const field=document.getElementById('overrideField').value;
+  const val=parseFloat(document.getElementById('overrideValue').value);
+  const pos=portfolioData.find(p=>p.obligor_name.toLowerCase()===name.toLowerCase());
+  if(!pos){alert('Position not found');return;}
+  pos[field]=val;
+  if(field==='drawn'){const t=portfolioData.reduce((s,p)=>s+p.drawn,0);
+    portfolioData.forEach(p=>{p.position_pct=((p.drawn/t)*100).toFixed(2);});}
+  renderPort(); closeModal(); alert(`Updated ${field} for ${name} → ${val}`);
+}
+
+function exportAI(){
+  if(!currentAnalysis) return;
+  const c=`GP OS — PORTFOLIO ANALYSIS\n${'='.repeat(50)}\nGenerated: ${currentAnalysis.ts}\n\nQUERY:\n${currentAnalysis.q}\n\n${'='.repeat(50)}\n\nANALYSIS:\n${currentAnalysis.text}\n\nPositions: ${portfolioData.length} · Drawn: $${currentAnalysis.total.toFixed(1)}M\nPowered by Claude (Anthropic)`;
+  const url=URL.createObjectURL(new Blob([c],{type:'text/plain'}));
+  const a=document.createElement('a'); a.href=url; a.download=`analysis-${Date.now()}.txt`; a.click();
+  URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>
